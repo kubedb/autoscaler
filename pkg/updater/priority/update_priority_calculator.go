@@ -49,7 +49,7 @@ var (
 // i.e. pod with 10M current memory and recommendation 20M will have higher update priority
 // than pod with 100M current memory and 150M recommendation (100% increase vs 50% increase)
 type UpdatePriorityCalculator struct {
-	vpa                     *vpa_types.VerticalPodAutoscaler
+	vpa                     *vpa_types.VerticalAutoscaler
 	pods                    []prioritizedPod
 	config                  *UpdateConfig
 	recommendationProcessor vpa_api_util.RecommendationProcessor
@@ -67,7 +67,7 @@ type UpdateConfig struct {
 // an update config.
 // If the vpa resource policy is nil, there will be no policy restriction on update.
 // If the given update config is nil, default values are used.
-func NewUpdatePriorityCalculator(vpa *vpa_types.VerticalPodAutoscaler,
+func NewUpdatePriorityCalculator(vpa *vpa_types.VerticalAutoscaler,
 	config *UpdateConfig,
 	recommendationProcessor vpa_api_util.RecommendationProcessor,
 	priorityProcessor PriorityProcessor) UpdatePriorityCalculator {

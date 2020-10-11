@@ -66,16 +66,16 @@ type ControllerKey struct {
 	Name      string
 }
 
-// ControllerKeyWithAPIVersion identifies a controller and API it's defined in.
-type ControllerKeyWithAPIVersion struct {
+// ControllerKeyWithAPIGroup identifies a controller and API it's defined in.
+type ControllerKeyWithAPIGroup struct {
 	ControllerKey
-	ApiVersion string
+	ApiGroup string
 }
 
 // ControllerFetcher is responsible for finding the topmost well-known or scalable controller
 type ControllerFetcher interface {
 	// FindTopMostWellKnownOrScalable returns topmost well-known or scalable controller. Error is returned if controller cannot be found.
-	FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error)
+	FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error)
 }
 
 type controllerFetcher struct {
@@ -127,23 +127,27 @@ func NewControllerFetcher(config *rest.Config, kubeClient kube_client.Interface,
 	}
 }
 
-func getOwnerController(owners []metav1.OwnerReference, namespace string) *ControllerKeyWithAPIVersion {
+func getOwnerController(owners []metav1.OwnerReference, namespace string) *ControllerKeyWithAPIGroup {
 	for _, owner := range owners {
 		if owner.Controller != nil && *owner.Controller {
-			return &ControllerKeyWithAPIVersion{
+			gv, err := schema.ParseGroupVersion(owner.APIVersion)
+			if err != nil {
+				panic(err)
+			}
+			return &ControllerKeyWithAPIGroup{
 				ControllerKey: ControllerKey{
 					Namespace: namespace,
 					Kind:      owner.Kind,
 					Name:      owner.Name,
 				},
-				ApiVersion: owner.APIVersion,
+				ApiGroup: gv.Group,
 			}
 		}
 	}
 	return nil
 }
 
-func getParentOfWellKnownController(informer cache.SharedIndexInformer, controllerKey ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func getParentOfWellKnownController(informer cache.SharedIndexInformer, controllerKey ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	namespace := controllerKey.Namespace
 	name := controllerKey.Name
 	kind := controllerKey.Kind
@@ -203,7 +207,7 @@ func getParentOfWellKnownController(informer cache.SharedIndexInformer, controll
 	return nil, fmt.Errorf("Don't know how to read owner controller")
 }
 
-func (f *controllerFetcher) getParentOfController(controllerKey ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func (f *controllerFetcher) getParentOfController(controllerKey ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	kind := wellKnownController(controllerKey.Kind)
 	informer, exists := f.informersMap[kind]
 	if exists {
@@ -221,34 +225,29 @@ func (f *controllerFetcher) getParentOfController(controllerKey ControllerKeyWit
 	}
 	if err != nil {
 		return nil, fmt.Errorf("Unhandled targetRef %s / %s / %s, last error %v",
-			controllerKey.ApiVersion, controllerKey.Kind, controllerKey.Name, err)
+			controllerKey.ApiGroup, controllerKey.Kind, controllerKey.Name, err)
 	}
 
 	return owner, nil
 }
 
-func (c *ControllerKeyWithAPIVersion) groupKind() (schema.GroupKind, error) {
+func (c *ControllerKeyWithAPIGroup) groupKind() (schema.GroupKind, error) {
 	// TODO: cache response
-	groupVersion, err := schema.ParseGroupVersion(c.ApiVersion)
-	if err != nil {
-		return schema.GroupKind{}, err
-	}
-
 	groupKind := schema.GroupKind{
-		Group: groupVersion.Group,
+		Group: c.ApiGroup,
 		Kind:  c.ControllerKey.Kind,
 	}
 
 	return groupKind, nil
 }
 
-func (f *controllerFetcher) isWellKnown(key *ControllerKeyWithAPIVersion) bool {
+func (f *controllerFetcher) isWellKnown(key *ControllerKeyWithAPIGroup) bool {
 	kind := wellKnownController(key.ControllerKey.Kind)
 	_, exists := f.informersMap[kind]
 	return exists
 }
 
-func (f *controllerFetcher) isWellKnownOrScalable(key *ControllerKeyWithAPIVersion) bool {
+func (f *controllerFetcher) isWellKnownOrScalable(key *ControllerKeyWithAPIGroup) bool {
 	if f.isWellKnown(key) {
 		return true
 	}
@@ -279,7 +278,7 @@ func (f *controllerFetcher) isWellKnownOrScalable(key *ControllerKeyWithAPIVersi
 	return false
 }
 
-func (f *controllerFetcher) getOwnerForScaleResource(groupKind schema.GroupKind, namespace, name string) (*ControllerKeyWithAPIVersion, error) {
+func (f *controllerFetcher) getOwnerForScaleResource(groupKind schema.GroupKind, namespace, name string) (*ControllerKeyWithAPIGroup, error) {
 	if wellKnownController(groupKind.Kind) == node {
 		// Some pods specify nods as their owners. This causes performance problems
 		// in big clusters when VPA tries to get all nodes. We know nodes aren't
@@ -304,19 +303,19 @@ func (f *controllerFetcher) getOwnerForScaleResource(groupKind schema.GroupKind,
 	return nil, lastError
 }
 
-func (f *controllerFetcher) FindTopMostWellKnownOrScalable(key *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func (f *controllerFetcher) FindTopMostWellKnownOrScalable(key *ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	if key == nil {
 		return nil, nil
 	}
 
-	var topMostWellKnownOrScalable *ControllerKeyWithAPIVersion
+	var topMostWellKnownOrScalable *ControllerKeyWithAPIGroup
 
 	wellKnownOrScalable := f.isWellKnownOrScalable(key)
 	if wellKnownOrScalable {
 		topMostWellKnownOrScalable = key
 	}
 
-	visited := make(map[ControllerKeyWithAPIVersion]bool)
+	visited := make(map[ControllerKeyWithAPIGroup]bool)
 	visited[*key] = true
 	for {
 		owner, err := f.getParentOfController(*key)
@@ -346,24 +345,24 @@ func (f *controllerFetcher) FindTopMostWellKnownOrScalable(key *ControllerKeyWit
 type identityControllerFetcher struct {
 }
 
-func (f *identityControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func (f *identityControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	return controller, nil
 }
 
 type constControllerFetcher struct {
-	ControllerKeyWithAPIVersion *ControllerKeyWithAPIVersion
+	ControllerKeyWithAPIVersion *ControllerKeyWithAPIGroup
 }
 
-func (f *constControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func (f *constControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	return f.ControllerKeyWithAPIVersion, nil
 }
 
 type mockControllerFetcher struct {
-	expected *ControllerKeyWithAPIVersion
-	result   *ControllerKeyWithAPIVersion
+	expected *ControllerKeyWithAPIGroup
+	result   *ControllerKeyWithAPIGroup
 }
 
-func (f *mockControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func (f *mockControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	if controller == nil && f.expected == nil {
 		return f.result, nil
 	}

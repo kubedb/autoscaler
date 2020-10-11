@@ -324,14 +324,14 @@ func SetupVPAForNHamsters(f *framework.Framework, n int, cpu string, mode vpa_ty
 }
 
 // NewVPA creates a VPA object for e2e test purposes.
-func NewVPA(f *framework.Framework, name string, targetRef *autoscaling.CrossVersionObjectReference) *vpa_types.VerticalPodAutoscaler {
+func NewVPA(f *framework.Framework, name string, targetRef *autoscaling.CrossVersionObjectReference) *vpa_types.VerticalAutoscaler {
 	updateMode := vpa_types.UpdateModeAuto
-	vpa := vpa_types.VerticalPodAutoscaler{
+	vpa := vpa_types.VerticalAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: f.Namespace.Name,
 		},
-		Spec: vpa_types.VerticalPodAutoscalerSpec{
+		Spec: vpa_types.VerticalAutoscalerSpec{
 			TargetRef: targetRef,
 			UpdatePolicy: &vpa_types.PodUpdatePolicy{
 				UpdateMode: &updateMode,
@@ -357,9 +357,9 @@ func getVpaClientSet(f *framework.Framework) vpa_clientset.Interface {
 }
 
 // InstallVPA installs a VPA object in the test cluster.
-func InstallVPA(f *framework.Framework, vpa *vpa_types.VerticalPodAutoscaler) {
+func InstallVPA(f *framework.Framework, vpa *vpa_types.VerticalAutoscaler) {
 	vpaClientSet := getVpaClientSet(f)
-	_, err := vpaClientSet.AutoscalingV1().VerticalPodAutoscalers(f.Namespace.Name).Create(context.TODO(), vpa, metav1.CreateOptions{})
+	_, err := vpaClientSet.AutoscalingV1().VerticalAutoscalers(f.Namespace.Name).Create(context.TODO(), vpa, metav1.CreateOptions{})
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error creating VPA")
 }
 
@@ -368,14 +368,14 @@ func InstallRawVPA(f *framework.Framework, obj interface{}) error {
 	vpaClientSet := getVpaClientSet(f)
 	err := vpaClientSet.AutoscalingV1().RESTClient().Post().
 		Namespace(f.Namespace.Name).
-		Resource("verticalpodautoscalers").
+		Resource("verticalautoscalers").
 		Body(obj).
 		Do(context.TODO())
 	return err.Error()
 }
 
 // PatchVpaRecommendation installs a new reocmmendation for VPA object.
-func PatchVpaRecommendation(f *framework.Framework, vpa *vpa_types.VerticalPodAutoscaler,
+func PatchVpaRecommendation(f *framework.Framework, vpa *vpa_types.VerticalAutoscaler,
 	recommendation *vpa_types.RecommendedPodResources) {
 	newStatus := vpa.Status.DeepCopy()
 	newStatus.Recommendation = recommendation
@@ -385,7 +385,7 @@ func PatchVpaRecommendation(f *framework.Framework, vpa *vpa_types.VerticalPodAu
 		Value: *newStatus,
 	}})
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	_, err = getVpaClientSet(f).AutoscalingV1().VerticalPodAutoscalers(f.Namespace.Name).Patch(context.TODO(), vpa.Name, types.JSONPatchType, bytes, metav1.PatchOptions{})
+	_, err = getVpaClientSet(f).AutoscalingV1().VerticalAutoscalers(f.Namespace.Name).Patch(context.TODO(), vpa.Name, types.JSONPatchType, bytes, metav1.PatchOptions{})
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to patch VPA.")
 }
 
@@ -504,11 +504,11 @@ func CheckNoPodsEvicted(f *framework.Framework, initialPodSet PodSet) {
 
 // WaitForVPAMatch pools VPA object until match function returns true. Returns
 // polled vpa object. On timeout returns error.
-func WaitForVPAMatch(c vpa_clientset.Interface, vpa *vpa_types.VerticalPodAutoscaler, match func(vpa *vpa_types.VerticalPodAutoscaler) bool) (*vpa_types.VerticalPodAutoscaler, error) {
-	var polledVpa *vpa_types.VerticalPodAutoscaler
+func WaitForVPAMatch(c vpa_clientset.Interface, vpa *vpa_types.VerticalAutoscaler, match func(vpa *vpa_types.VerticalAutoscaler) bool) (*vpa_types.VerticalAutoscaler, error) {
+	var polledVpa *vpa_types.VerticalAutoscaler
 	err := wait.PollImmediate(pollInterval, pollTimeout, func() (bool, error) {
 		var err error
-		polledVpa, err = c.AutoscalingV1().VerticalPodAutoscalers(vpa.Namespace).Get(context.TODO(), vpa.Name, metav1.GetOptions{})
+		polledVpa, err = c.AutoscalingV1().VerticalAutoscalers(vpa.Namespace).Get(context.TODO(), vpa.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -528,16 +528,16 @@ func WaitForVPAMatch(c vpa_clientset.Interface, vpa *vpa_types.VerticalPodAutosc
 
 // WaitForRecommendationPresent pools VPA object until recommendations are not empty. Returns
 // polled vpa object. On timeout returns error.
-func WaitForRecommendationPresent(c vpa_clientset.Interface, vpa *vpa_types.VerticalPodAutoscaler) (*vpa_types.VerticalPodAutoscaler, error) {
-	return WaitForVPAMatch(c, vpa, func(vpa *vpa_types.VerticalPodAutoscaler) bool {
+func WaitForRecommendationPresent(c vpa_clientset.Interface, vpa *vpa_types.VerticalAutoscaler) (*vpa_types.VerticalAutoscaler, error) {
+	return WaitForVPAMatch(c, vpa, func(vpa *vpa_types.VerticalAutoscaler) bool {
 		return vpa.Status.Recommendation != nil && len(vpa.Status.Recommendation.ContainerRecommendations) != 0
 	})
 }
 
 // WaitForUncappedCPURecommendationAbove pools VPA object until uncapped recommendation is above specified value.
 // Returns polled VPA object. On timeout returns error.
-func WaitForUncappedCPURecommendationAbove(c vpa_clientset.Interface, vpa *vpa_types.VerticalPodAutoscaler, minMilliCPU int64) (*vpa_types.VerticalPodAutoscaler, error) {
-	return WaitForVPAMatch(c, vpa, func(vpa *vpa_types.VerticalPodAutoscaler) bool {
+func WaitForUncappedCPURecommendationAbove(c vpa_clientset.Interface, vpa *vpa_types.VerticalAutoscaler, minMilliCPU int64) (*vpa_types.VerticalAutoscaler, error) {
+	return WaitForVPAMatch(c, vpa, func(vpa *vpa_types.VerticalAutoscaler) bool {
 		if vpa.Status.Recommendation == nil || len(vpa.Status.Recommendation.ContainerRecommendations) == 0 {
 			return false
 		}

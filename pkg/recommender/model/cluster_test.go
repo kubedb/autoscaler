@@ -237,12 +237,12 @@ func TestMissingKeys(t *testing.T) {
 }
 
 func addVpa(cluster *ClusterState, id VpaID, annotations vpaAnnotationsMap, selector string) *Vpa {
-	apiObject := test.VerticalPodAutoscaler().WithNamespace(id.Namespace).
+	apiObject := test.VerticalAutoscaler().WithNamespace(id.Namespace).
 		WithName(id.VpaName).WithContainer(testContainerID.ContainerName).WithAnnotations(annotations).Get()
 	return addVpaObject(cluster, id, apiObject, selector)
 }
 
-func addVpaObject(cluster *ClusterState, id VpaID, vpa *vpa_types.VerticalPodAutoscaler, selector string) *Vpa {
+func addVpaObject(cluster *ClusterState, id VpaID, vpa *vpa_types.VerticalAutoscaler, selector string) *Vpa {
 	labelSelector, _ := metav1.ParseToLabelSelector(selector)
 	parsedSelector, _ := metav1.LabelSelectorAsSelector(labelSelector)
 	err := cluster.AddOrUpdateVpa(vpa, parsedSelector)
@@ -346,7 +346,7 @@ func TestUpdatePodSelector(t *testing.T) {
 
 // Test setting ResourcePolicy and UpdatePolicy on adding or updating VPA object
 func TestAddOrUpdateVPAPolicies(t *testing.T) {
-	testVpaBuilder := test.VerticalPodAutoscaler().WithName(testVpaID.VpaName).
+	testVpaBuilder := test.VerticalAutoscaler().WithName(testVpaID.VpaName).
 		WithNamespace(testVpaID.Namespace).WithContainer(testContainerID.ContainerName)
 	updateModeAuto := vpa_types.UpdateModeAuto
 	updateModeOff := vpa_types.UpdateModeOff
@@ -354,8 +354,8 @@ func TestAddOrUpdateVPAPolicies(t *testing.T) {
 	scalingModeOff := vpa_types.ContainerScalingModeOff
 	cases := []struct {
 		name                string
-		oldVpa              *vpa_types.VerticalPodAutoscaler
-		newVpa              *vpa_types.VerticalPodAutoscaler
+		oldVpa              *vpa_types.VerticalAutoscaler
+		newVpa              *vpa_types.VerticalAutoscaler
 		resourcePolicy      *vpa_types.PodResourcePolicy
 		expectedScalingMode *vpa_types.ContainerScalingMode
 		expectedUpdateMode  *vpa_types.UpdateMode

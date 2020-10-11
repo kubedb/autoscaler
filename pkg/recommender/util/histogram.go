@@ -17,7 +17,9 @@ limitations under the License.
 package util
 
 import (
+	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -223,7 +225,7 @@ func (h *histogram) updateMinAndMaxBucket() {
 
 func (h *histogram) SaveToChekpoint() (*vpa_types.HistogramCheckpoint, error) {
 	result := vpa_types.HistogramCheckpoint{
-		BucketWeights: make(map[int]uint32),
+		BucketWeights: make(map[json.Number]uint32),
 	}
 	result.TotalWeight = h.totalWeight
 	// Find max
@@ -239,7 +241,7 @@ func (h *histogram) SaveToChekpoint() (*vpa_types.HistogramCheckpoint, error) {
 	for bucket := h.minBucket; bucket <= h.maxBucket; bucket++ {
 		newWeight := uint32(round(h.bucketWeight[bucket] * ratio))
 		if newWeight > 0 {
-			result.BucketWeights[bucket] = newWeight
+			result.BucketWeights[json.Number(strconv.Itoa(bucket))] = newWeight
 		}
 	}
 
@@ -254,7 +256,11 @@ func (h *histogram) LoadFromCheckpoint(checkpoint *vpa_types.HistogramCheckpoint
 		return fmt.Errorf("Cannot load checkpoint with negative weight %v", checkpoint.TotalWeight)
 	}
 	sum := int64(0)
-	for bucket, weight := range checkpoint.BucketWeights {
+	for bucketNum, weight := range checkpoint.BucketWeights {
+		bucket, err := strconv.Atoi(string(bucketNum))
+		if err != nil {
+			return err
+		}
 		sum += int64(weight)
 		if bucket >= h.options.NumBuckets() {
 			return fmt.Errorf("Checkpoint has bucket %v that is exceeding histogram buckets %v", bucket, h.options.NumBuckets())
@@ -267,7 +273,11 @@ func (h *histogram) LoadFromCheckpoint(checkpoint *vpa_types.HistogramCheckpoint
 		return nil
 	}
 	ratio := checkpoint.TotalWeight / float64(sum)
-	for bucket, weight := range checkpoint.BucketWeights {
+	for bucketNum, weight := range checkpoint.BucketWeights {
+		bucket, err := strconv.Atoi(string(bucketNum))
+		if err != nil {
+			return err
+		}
 		if bucket < h.minBucket {
 			h.minBucket = bucket
 		}

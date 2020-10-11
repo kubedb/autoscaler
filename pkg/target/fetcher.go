@@ -51,7 +51,7 @@ const (
 type VpaTargetSelectorFetcher interface {
 	// Fetch returns a labelSelector used to gather Pods controlled by the given VPA.
 	// If error is nil, the returned labelSelector is not nil.
-	Fetch(vpa *vpa_types.VerticalPodAutoscaler) (labels.Selector, error)
+	Fetch(vpa *vpa_types.VerticalAutoscaler) (labels.Selector, error)
 }
 
 type wellKnownController string
@@ -117,7 +117,7 @@ type vpaTargetSelectorFetcher struct {
 	informersMap    map[wellKnownController]cache.SharedIndexInformer
 }
 
-func (f *vpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalPodAutoscaler) (labels.Selector, error) {
+func (f *vpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalAutoscaler) (labels.Selector, error) {
 	if vpa.Spec.TargetRef == nil {
 		return nil, fmt.Errorf("targetRef not defined. If this is a v1beta1 object switch to v1beta2.")
 	}
@@ -129,19 +129,18 @@ func (f *vpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalPodAutoscaler) (
 
 	// not on a list of known controllers, use scale sub-resource
 	// TODO: cache response
-	groupVersion, err := schema.ParseGroupVersion(vpa.Spec.TargetRef.APIVersion)
-	if err != nil {
-		return nil, err
+	if vpa.Spec.TargetRef.APIGroup == nil {
+		return nil, fmt.Errorf("missing apiGroup for target of VerticalAutoscaler %/%s", vpa.Namespace, vpa.Name)
 	}
 	groupKind := schema.GroupKind{
-		Group: groupVersion.Group,
+		Group: *vpa.Spec.TargetRef.APIGroup,
 		Kind:  vpa.Spec.TargetRef.Kind,
 	}
 
 	selector, err := f.getLabelSelectorFromResource(groupKind, vpa.Namespace, vpa.Spec.TargetRef.Name)
 	if err != nil {
 		return nil, fmt.Errorf("Unhandled targetRef %s / %s / %s, last error %v",
-			vpa.Spec.TargetRef.APIVersion, vpa.Spec.TargetRef.Kind, vpa.Spec.TargetRef.Name, err)
+			*vpa.Spec.TargetRef.APIGroup, vpa.Spec.TargetRef.Kind, vpa.Spec.TargetRef.Name, err)
 	}
 	return selector, nil
 }

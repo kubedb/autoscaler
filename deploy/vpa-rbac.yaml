@@ -39,7 +39,7 @@ rules:
   - apiGroups:
       - "poc.autoscaling.k8s.io"
     resources:
-      - verticalpodautoscalers
+      - verticalautoscalers
     verbs:
       - get
       - list
@@ -48,7 +48,7 @@ rules:
   - apiGroups:
       - "autoscaling.k8s.io"
     resources:
-      - verticalpodautoscalers
+      - verticalautoscalers
     verbs:
       - get
       - list
@@ -63,7 +63,7 @@ rules:
   - apiGroups:
       - "poc.autoscaling.k8s.io"
     resources:
-      - verticalpodautoscalercheckpoints
+      - verticalautoscalercheckpoints
     verbs:
       - get
       - list
@@ -74,7 +74,7 @@ rules:
   - apiGroups:
       - "autoscaling.k8s.io"
     resources:
-      - verticalpodautoscalercheckpoints
+      - verticalautoscalercheckpoints
     verbs:
       - get
       - list
@@ -258,7 +258,7 @@ rules:
   - apiGroups:
       - "poc.autoscaling.k8s.io"
     resources:
-      - verticalpodautoscalers
+      - verticalautoscalers
     verbs:
       - get
       - list
@@ -266,7 +266,7 @@ rules:
   - apiGroups:
       - "autoscaling.k8s.io"
     resources:
-      - verticalpodautoscalers
+      - verticalautoscalers
     verbs:
       - get
       - list

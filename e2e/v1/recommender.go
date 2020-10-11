@@ -78,7 +78,7 @@ func (*observer) OnAdd(obj interface{})    {}
 func (*observer) OnDelete(obj interface{}) {}
 
 func (o *observer) OnUpdate(oldObj, newObj interface{}) {
-	get := func(vpa *vpa_types.VerticalPodAutoscaler) (result resourceRecommendation, found bool) {
+	get := func(vpa *vpa_types.VerticalAutoscaler) (result resourceRecommendation, found bool) {
 		if vpa.Status.Recommendation == nil || len(vpa.Status.Recommendation.ContainerRecommendations) == 0 {
 			found = false
 			result = resourceRecommendation{}
@@ -88,8 +88,8 @@ func (o *observer) OnUpdate(oldObj, newObj interface{}) {
 		}
 		return
 	}
-	oldVPA, _ := oldObj.(*vpa_types.VerticalPodAutoscaler)
-	NewVPA, _ := newObj.(*vpa_types.VerticalPodAutoscaler)
+	oldVPA, _ := oldObj.(*vpa_types.VerticalAutoscaler)
+	NewVPA, _ := newObj.(*vpa_types.VerticalAutoscaler)
 	oldRecommendation, oldFound := get(oldVPA)
 	newRecommendation, newFound := get(NewVPA)
 	result := recommendationChange{
@@ -101,10 +101,10 @@ func (o *observer) OnUpdate(oldObj, newObj interface{}) {
 }
 
 func getVpaObserver(vpaClientSet vpa_clientset.Interface) *observer {
-	vpaListWatch := cache.NewListWatchFromClient(vpaClientSet.AutoscalingV1().RESTClient(), "verticalpodautoscalers", apiv1.NamespaceAll, fields.Everything())
+	vpaListWatch := cache.NewListWatchFromClient(vpaClientSet.AutoscalingV1().RESTClient(), "verticalautoscalers", apiv1.NamespaceAll, fields.Everything())
 	vpaObserver := observer{channel: make(chan recommendationChange)}
 	_, controller := cache.NewIndexerInformer(vpaListWatch,
-		&vpa_types.VerticalPodAutoscaler{},
+		&vpa_types.VerticalAutoscaler{},
 		1*time.Hour,
 		&vpaObserver,
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
@@ -124,22 +124,22 @@ var _ = RecommenderE2eDescribe("Checkpoints", func() {
 		ns := f.Namespace.Name
 		vpaClientSet := getVpaClientSet(f)
 
-		checkpoint := vpa_types.VerticalPodAutoscalerCheckpoint{
+		checkpoint := vpa_types.VerticalAutoscalerCheckpoint{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
 				Namespace: ns,
 			},
-			Spec: vpa_types.VerticalPodAutoscalerCheckpointSpec{
+			Spec: vpa_types.VerticalAutoscalerCheckpointSpec{
 				VPAObjectName: "some-vpa",
 			},
 		}
 
-		_, err := vpaClientSet.AutoscalingV1().VerticalPodAutoscalerCheckpoints(ns).Create(context.TODO(), &checkpoint, metav1.CreateOptions{})
+		_, err := vpaClientSet.AutoscalingV1().VerticalAutoscalerCheckpoints(ns).Create(context.TODO(), &checkpoint, metav1.CreateOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		time.Sleep(15 * time.Minute)
 
-		list, err := vpaClientSet.AutoscalingV1().VerticalPodAutoscalerCheckpoints(ns).List(context.TODO(), metav1.ListOptions{})
+		list, err := vpaClientSet.AutoscalingV1().VerticalAutoscalerCheckpoints(ns).List(context.TODO(), metav1.ListOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		gomega.Expect(list.Items).To(gomega.BeEmpty())
 	})
@@ -173,7 +173,7 @@ var _ = RecommenderE2eDescribe("VPA CRD object", func() {
 	f := framework.NewDefaultFramework("vertical-pod-autoscaling")
 
 	var (
-		vpaCRD       *vpa_types.VerticalPodAutoscaler
+		vpaCRD       *vpa_types.VerticalAutoscaler
 		vpaClientSet vpa_clientset.Interface
 	)
 
@@ -303,7 +303,7 @@ func getMilliCpu(resources apiv1.ResourceList) int64 {
 }
 
 // createVpaCRDWithMinMaxAllowed creates vpa object with min and max resources allowed.
-func createVpaCRDWithMinMaxAllowed(f *framework.Framework, minAllowed, maxAllowed apiv1.ResourceList) *vpa_types.VerticalPodAutoscaler {
+func createVpaCRDWithMinMaxAllowed(f *framework.Framework, minAllowed, maxAllowed apiv1.ResourceList) *vpa_types.VerticalAutoscaler {
 	vpaCRD := NewVPA(f, "hamster-vpa", hamsterTargetRef)
 	containerResourcePolicies := []vpa_types.ContainerResourcePolicy{
 		{
@@ -360,7 +360,7 @@ var _ = RecommenderE2eDescribe("VPA CRD object", func() {
 
 // createVpaCRDWithContainerScalingModes creates vpa object with containers policies
 // having assigned given scaling modes respectively.
-func createVpaCRDWithContainerScalingModes(f *framework.Framework, modes ...vpa_types.ContainerScalingMode) *vpa_types.VerticalPodAutoscaler {
+func createVpaCRDWithContainerScalingModes(f *framework.Framework, modes ...vpa_types.ContainerScalingMode) *vpa_types.VerticalAutoscaler {
 	vpaCRD := NewVPA(f, "hamster-vpa", hamsterTargetRef)
 	containerResourcePolicies := make([]vpa_types.ContainerResourcePolicy, len(modes), len(modes))
 	for i := range modes {

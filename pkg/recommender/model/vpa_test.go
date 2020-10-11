@@ -17,6 +17,7 @@ limitations under the License.
 package model
 
 import (
+	kmapi "kmodules.xyz/client-go/api/v1"
 	"testing"
 	"time"
 
@@ -51,34 +52,34 @@ func TestUpdateConditions(t *testing.T) {
 		name               string
 		podsMatched        bool
 		hasRecommendation  bool
-		expectedConditions []vpa_types.VerticalPodAutoscalerCondition
-		expectedAbsent     []vpa_types.VerticalPodAutoscalerConditionType
+		expectedConditions []kmapi.Condition
+		expectedAbsent     []vpa_types.VerticalAutoscalerConditionType
 	}{
 		{
 			name:              "Has recommendation",
 			podsMatched:       true,
 			hasRecommendation: true,
-			expectedConditions: []vpa_types.VerticalPodAutoscalerCondition{
+			expectedConditions: []kmapi.Condition{
 				{
-					Type:    vpa_types.RecommendationProvided,
+					Type:    string(vpa_types.RecommendationProvided),
 					Status:  corev1.ConditionTrue,
 					Reason:  "",
 					Message: "",
 				},
 			},
-			expectedAbsent: []vpa_types.VerticalPodAutoscalerConditionType{vpa_types.NoPodsMatched},
+			expectedAbsent: []vpa_types.VerticalAutoscalerConditionType{vpa_types.NoPodsMatched},
 		}, {
 			name:              "Has recommendation but no pods matched",
 			podsMatched:       false,
 			hasRecommendation: true,
-			expectedConditions: []vpa_types.VerticalPodAutoscalerCondition{
+			expectedConditions: []kmapi.Condition{
 				{
-					Type:    vpa_types.RecommendationProvided,
+					Type:    string(vpa_types.RecommendationProvided),
 					Status:  corev1.ConditionTrue,
 					Reason:  "",
 					Message: "",
 				}, {
-					Type:    vpa_types.NoPodsMatched,
+					Type:    string(vpa_types.NoPodsMatched),
 					Status:  corev1.ConditionTrue,
 					Reason:  "NoPodsMatched",
 					Message: "No pods match this VPA object",
@@ -88,27 +89,27 @@ func TestUpdateConditions(t *testing.T) {
 			name:              "No recommendation but pods matched",
 			podsMatched:       true,
 			hasRecommendation: false,
-			expectedConditions: []vpa_types.VerticalPodAutoscalerCondition{
+			expectedConditions: []kmapi.Condition{
 				{
-					Type:    vpa_types.RecommendationProvided,
+					Type:    string(vpa_types.RecommendationProvided),
 					Status:  corev1.ConditionFalse,
 					Reason:  "",
 					Message: "",
 				},
 			},
-			expectedAbsent: []vpa_types.VerticalPodAutoscalerConditionType{vpa_types.NoPodsMatched},
+			expectedAbsent: []vpa_types.VerticalAutoscalerConditionType{vpa_types.NoPodsMatched},
 		}, {
 			name:              "No recommendation no pods matched",
 			podsMatched:       false,
 			hasRecommendation: false,
-			expectedConditions: []vpa_types.VerticalPodAutoscalerCondition{
+			expectedConditions: []kmapi.Condition{
 				{
-					Type:    vpa_types.RecommendationProvided,
+					Type:   string(vpa_types.RecommendationProvided),
 					Status:  corev1.ConditionFalse,
 					Reason:  "NoPodsMatched",
 					Message: "No pods match this VPA object",
 				}, {
-					Type:    vpa_types.NoPodsMatched,
+					Type:   string(vpa_types.NoPodsMatched),
 					Status:  corev1.ConditionTrue,
 					Reason:  "NoPodsMatched",
 					Message: "No pods match this VPA object",
@@ -126,14 +127,14 @@ func TestUpdateConditions(t *testing.T) {
 			vpa.UpdateConditions(tc.podsMatched)
 			for _, condition := range tc.expectedConditions {
 				assert.Contains(t, vpa.Conditions, condition.Type)
-				actualCondition := vpa.Conditions[condition.Type]
+				actualCondition := vpa.Conditions[vpa_types.VerticalAutoscalerConditionType(condition.Type)]
 				assert.Equal(t, condition.Status, actualCondition.Status, "Condition: %v", condition.Type)
 				assert.Equal(t, condition.Reason, actualCondition.Reason, "Condition: %v", condition.Type)
 				assert.Equal(t, condition.Message, actualCondition.Message, "Condition: %v", condition.Type)
 				if condition.Status == corev1.ConditionTrue {
-					assert.True(t, vpa.Conditions.ConditionActive(condition.Type))
+					assert.True(t, vpa.Conditions.ConditionActive(vpa_types.VerticalAutoscalerConditionType(condition.Type)))
 				} else {
-					assert.False(t, vpa.Conditions.ConditionActive(condition.Type))
+					assert.False(t, vpa.Conditions.ConditionActive(vpa_types.VerticalAutoscalerConditionType(condition.Type)))
 				}
 			}
 			for _, condition := range tc.expectedAbsent {

@@ -154,7 +154,7 @@ func TestAggregateContainerStateSaveToCheckpoint(t *testing.T) {
 }
 
 func TestAggregateContainerStateLoadFromCheckpointFailsForVersionMismatch(t *testing.T) {
-	checkpoint := vpa_types.VerticalPodAutoscalerCheckpointStatus{
+	checkpoint := vpa_types.VerticalAutoscalerCheckpointStatus{
 		Version: "foo",
 	}
 	cs := NewAggregateContainerState()
@@ -166,7 +166,7 @@ func TestAggregateContainerStateLoadFromCheckpoint(t *testing.T) {
 	location, _ := time.LoadLocation("UTC")
 	t1, t2 := time.Date(2018, time.January, 1, 2, 3, 4, 0, location), time.Date(2018, time.February, 1, 2, 3, 4, 0, location)
 
-	checkpoint := vpa_types.VerticalPodAutoscalerCheckpointStatus{
+	checkpoint := vpa_types.VerticalAutoscalerCheckpointStatus{
 		Version:           SupportedCheckpointVersion,
 		FirstSampleStart:  metav1.NewTime(t1),
 		LastSampleStart:   metav1.NewTime(t2),

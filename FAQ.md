@@ -67,7 +67,7 @@ Webhooks:
       CREATE
       UPDATE
     Resources:
-      verticalpodautoscalers
+      verticalautoscalers
 ```
 
 If the webhook config doesn't exist, something got wrong with webhook

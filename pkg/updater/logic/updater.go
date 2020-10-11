@@ -52,7 +52,7 @@ type Updater interface {
 }
 
 type updater struct {
-	vpaLister                    vpa_lister.VerticalPodAutoscalerLister
+	vpaLister                    vpa_lister.VerticalAutoscalerLister
 	podLister                    v1lister.PodLister
 	eventRecorder                record.EventRecorder
 	evictionFactory              eviction.PodsEvictionRestrictionFactory
@@ -165,7 +165,7 @@ func (u *updater) RunOnce(ctx context.Context) {
 	timer.ObserveStep("ListPods")
 	allLivePods := filterDeletedPods(podsList)
 
-	controlledPods := make(map[*vpa_types.VerticalPodAutoscaler][]*apiv1.Pod)
+	controlledPods := make(map[*vpa_types.VerticalAutoscaler][]*apiv1.Pod)
 	for _, pod := range allLivePods {
 		controllingVPA := vpa_api_util.GetControllingVPAForPod(pod, vpas)
 		if controllingVPA != nil {
@@ -246,7 +246,7 @@ func getRateLimiter(evictionRateLimit float64, evictionRateLimitBurst int) *rate
 }
 
 // getPodsUpdateOrder returns list of pods that should be updated ordered by update priority
-func (u *updater) getPodsUpdateOrder(pods []*apiv1.Pod, vpa *vpa_types.VerticalPodAutoscaler) []*apiv1.Pod {
+func (u *updater) getPodsUpdateOrder(pods []*apiv1.Pod, vpa *vpa_types.VerticalAutoscaler) []*apiv1.Pod {
 	priorityCalculator := priority.NewUpdatePriorityCalculator(
 		vpa,
 		nil,

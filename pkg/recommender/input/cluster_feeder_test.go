@@ -35,11 +35,11 @@ import (
 )
 
 type fakeControllerFetcher struct {
-	key *controllerfetcher.ControllerKeyWithAPIVersion
+	key *controllerfetcher.ControllerKeyWithAPIGroup
 	err error
 }
 
-func (f *fakeControllerFetcher) FindTopMostWellKnownOrScalable(controller *controllerfetcher.ControllerKeyWithAPIVersion) (*controllerfetcher.ControllerKeyWithAPIVersion, error) {
+func (f *fakeControllerFetcher) FindTopMostWellKnownOrScalable(controller *controllerfetcher.ControllerKeyWithAPIGroup) (*controllerfetcher.ControllerKeyWithAPIGroup, error) {
 	return f.key, f.err
 }
 
@@ -60,11 +60,11 @@ var (
 )
 
 const (
-	kind       = "dodokind"
-	name1      = "dotaro"
-	name2      = "doseph"
-	namespace  = "testNamespace"
-	apiVersion = "stardust"
+	kind      = "dodokind"
+	name1     = "dotaro"
+	name2     = "doseph"
+	namespace = "testNamespace"
+	apiGroup  = "stardust"
 )
 
 func TestLoadPods(t *testing.T) {
@@ -74,7 +74,7 @@ func TestLoadPods(t *testing.T) {
 		selector                            labels.Selector
 		fetchSelectorError                  error
 		targetRef                           *autoscalingv1.CrossVersionObjectReference
-		topMostWellKnownOrScalableKey       *controllerfetcher.ControllerKeyWithAPIVersion
+		topMostWellKnownOrScalableKey       *controllerfetcher.ControllerKeyWithAPIGroup
 		findTopMostWellKnownOrScalableError error
 		expectedSelector                    labels.Selector
 		expectedConfigUnsupported           *string
@@ -105,15 +105,15 @@ func TestLoadPods(t *testing.T) {
 			targetRef: &autoscalingv1.CrossVersionObjectReference{
 				Kind:       kind,
 				Name:       name1,
-				APIVersion: apiVersion,
+				APIVersion: apiGroup,
 			},
-			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIVersion{
+			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{
 					Kind:      kind,
 					Name:      name1,
 					Namespace: namespace,
 				},
-				ApiVersion: apiVersion,
+				ApiGroup: apiGroup,
 			},
 			expectedSelector:          parseLabelSelector("app = test"),
 			expectedConfigUnsupported: nil,
@@ -135,7 +135,7 @@ func TestLoadPods(t *testing.T) {
 			targetRef: &autoscalingv1.CrossVersionObjectReference{
 				Kind:       kind,
 				Name:       name1,
-				APIVersion: apiVersion,
+				APIVersion: apiGroup,
 			},
 			expectedConfigUnsupported: &unsupportedConditionNoTargetRef,
 		},
@@ -147,15 +147,15 @@ func TestLoadPods(t *testing.T) {
 			targetRef: &autoscalingv1.CrossVersionObjectReference{
 				Kind:       kind,
 				Name:       name1,
-				APIVersion: apiVersion,
+				APIVersion: apiGroup,
 			},
-			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIVersion{
+			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{
 					Kind:      kind,
 					Name:      name2,
 					Namespace: namespace,
 				},
-				ApiVersion: apiVersion,
+				ApiGroup: apiGroup,
 			},
 			expectedConfigUnsupported: &unsupportedTargetRefHasParent,
 		},
@@ -180,15 +180,15 @@ func TestLoadPods(t *testing.T) {
 			targetRef: &autoscalingv1.CrossVersionObjectReference{
 				Kind:       kind,
 				Name:       name1,
-				APIVersion: apiVersion,
+				APIVersion: apiGroup,
 			},
-			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIVersion{
+			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{
 					Kind:      kind,
 					Name:      name1,
 					Namespace: namespace,
 				},
-				ApiVersion: apiVersion,
+				ApiGroup: apiGroup,
 			},
 			expectedConfigUnsupported: nil,
 		},
@@ -200,9 +200,9 @@ func TestLoadPods(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			vpa := test.VerticalPodAutoscaler().WithName("testVpa").WithContainer("container").WithNamespace("testNamespace").WithTargetRef(tc.targetRef).Get()
-			vpaLister := &test.VerticalPodAutoscalerListerMock{}
-			vpaLister.On("List").Return([]*vpa_types.VerticalPodAutoscaler{vpa}, nil)
+			vpa := test.VerticalAutoscaler().WithName("testVpa").WithContainer("container").WithNamespace("testNamespace").WithTargetRef(tc.targetRef).Get()
+			vpaLister := &test.VerticalAutoscalerListerMock{}
+			vpaLister.On("List").Return([]*vpa_types.VerticalAutoscaler{vpa}, nil)
 
 			targetSelectorFetcher := target_mock.NewMockVpaTargetSelectorFetcher(ctrl)
 

@@ -40,12 +40,12 @@ type CheckpointWriter interface {
 }
 
 type checkpointWriter struct {
-	vpaCheckpointClient vpa_api.VerticalPodAutoscalerCheckpointsGetter
+	vpaCheckpointClient vpa_api.VerticalAutoscalerCheckpointsGetter
 	cluster             *model.ClusterState
 }
 
 // NewCheckpointWriter returns new instance of a CheckpointWriter
-func NewCheckpointWriter(cluster *model.ClusterState, vpaCheckpointClient vpa_api.VerticalPodAutoscalerCheckpointsGetter) CheckpointWriter {
+func NewCheckpointWriter(cluster *model.ClusterState, vpaCheckpointClient vpa_api.VerticalAutoscalerCheckpointsGetter) CheckpointWriter {
 	return &checkpointWriter{
 		vpaCheckpointClient: vpaCheckpointClient,
 		cluster:             cluster,
@@ -98,15 +98,15 @@ func (writer *checkpointWriter) StoreCheckpoints(ctx context.Context, now time.T
 				continue
 			}
 			checkpointName := fmt.Sprintf("%s-%s", vpa.ID.VpaName, container)
-			vpaCheckpoint := vpa_types.VerticalPodAutoscalerCheckpoint{
+			vpaCheckpoint := vpa_types.VerticalAutoscalerCheckpoint{
 				ObjectMeta: metav1.ObjectMeta{Name: checkpointName},
-				Spec: vpa_types.VerticalPodAutoscalerCheckpointSpec{
+				Spec: vpa_types.VerticalAutoscalerCheckpointSpec{
 					ContainerName: container,
 					VPAObjectName: vpa.ID.VpaName,
 				},
 				Status: *containerCheckpoint,
 			}
-			err = api_util.CreateOrUpdateVpaCheckpoint(writer.vpaCheckpointClient.VerticalPodAutoscalerCheckpoints(vpa.ID.Namespace), &vpaCheckpoint)
+			err = api_util.CreateOrUpdateVpaCheckpoint(writer.vpaCheckpointClient.VerticalAutoscalerCheckpoints(vpa.ID.Namespace), &vpaCheckpoint)
 			if err != nil {
 				klog.Errorf("Cannot save VPA %s/%s checkpoint for %s. Reason: %+v",
 					vpa.ID.Namespace, vpaCheckpoint.Spec.VPAObjectName, vpaCheckpoint.Spec.ContainerName, err)

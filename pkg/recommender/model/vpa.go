@@ -17,11 +17,11 @@ limitations under the License.
 package model
 
 import (
+	kmapi "kmodules.xyz/client-go/api/v1"
 	"sort"
 	"time"
 
-	autoscaling "k8s.io/api/autoscaling/v1"
-	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
@@ -33,21 +33,21 @@ import (
 type vpaAnnotationsMap map[string]string
 
 // Map from VPA condition type to condition.
-type vpaConditionsMap map[vpa_types.VerticalPodAutoscalerConditionType]vpa_types.VerticalPodAutoscalerCondition
+type vpaConditionsMap map[vpa_types.VerticalAutoscalerConditionType]kmapi.Condition
 
 func (conditionsMap *vpaConditionsMap) Set(
-	conditionType vpa_types.VerticalPodAutoscalerConditionType,
+	conditionType vpa_types.VerticalAutoscalerConditionType,
 	status bool, reason string, message string) *vpaConditionsMap {
 	oldCondition, alreadyPresent := (*conditionsMap)[conditionType]
-	condition := vpa_types.VerticalPodAutoscalerCondition{
-		Type:    conditionType,
+	condition := kmapi.Condition{
+		Type:    string(conditionType),
 		Reason:  reason,
 		Message: message,
 	}
 	if status {
-		condition.Status = apiv1.ConditionTrue
+		condition.Status = core.ConditionTrue
 	} else {
-		condition.Status = apiv1.ConditionFalse
+		condition.Status = core.ConditionFalse
 	}
 	if alreadyPresent && oldCondition.Status == condition.Status {
 		condition.LastTransitionTime = oldCondition.LastTransitionTime
@@ -58,8 +58,8 @@ func (conditionsMap *vpaConditionsMap) Set(
 	return conditionsMap
 }
 
-func (conditionsMap *vpaConditionsMap) AsList() []vpa_types.VerticalPodAutoscalerCondition {
-	conditions := make([]vpa_types.VerticalPodAutoscalerCondition, 0, len(*conditionsMap))
+func (conditionsMap *vpaConditionsMap) AsList() []kmapi.Condition {
+	conditions := make([]kmapi.Condition, 0, len(*conditionsMap))
 	for _, condition := range *conditionsMap {
 		conditions = append(conditions, condition)
 	}
@@ -72,9 +72,9 @@ func (conditionsMap *vpaConditionsMap) AsList() []vpa_types.VerticalPodAutoscale
 	return conditions
 }
 
-func (conditionsMap *vpaConditionsMap) ConditionActive(conditionType vpa_types.VerticalPodAutoscalerConditionType) bool {
+func (conditionsMap *vpaConditionsMap) ConditionActive(conditionType vpa_types.VerticalAutoscalerConditionType) bool {
 	condition, found := (*conditionsMap)[conditionType]
-	return found && condition.Status == apiv1.ConditionTrue
+	return found && condition.Status == core.ConditionTrue
 }
 
 // Vpa (Vertical Pod Autoscaler) object is responsible for vertical scaling of
@@ -107,7 +107,7 @@ type Vpa struct {
 	// IsV1Beta1API is set to true if VPA object has labelSelector defined as in v1beta1 api.
 	IsV1Beta1API bool
 	// TargetRef points to the controller managing the set of pods.
-	TargetRef *autoscaling.CrossVersionObjectReference
+	TargetRef *core.TypedLocalObjectReference
 	// PodCount contains number of live Pods matching a given VPA object.
 	PodCount int
 }
@@ -257,8 +257,8 @@ func (vpa *Vpa) UpdateConditions(podsMatched bool) {
 
 // AsStatus returns this objects equivalent of VPA Status. UpdateConditions
 // should be called first.
-func (vpa *Vpa) AsStatus() *vpa_types.VerticalPodAutoscalerStatus {
-	status := &vpa_types.VerticalPodAutoscalerStatus{
+func (vpa *Vpa) AsStatus() *vpa_types.VerticalAutoscalerStatus {
+	status := &vpa_types.VerticalAutoscalerStatus{
 		Conditions: vpa.Conditions.AsList(),
 	}
 	if vpa.Recommendation != nil {
@@ -272,7 +272,7 @@ func (vpa *Vpa) AsStatus() *vpa_types.VerticalPodAutoscalerStatus {
 // called first.
 func (vpa *Vpa) HasMatchedPods() bool {
 	noPodsMatched, found := vpa.Conditions[vpa_types.NoPodsMatched]
-	if found && noPodsMatched.Status == apiv1.ConditionTrue {
+	if found && noPodsMatched.Status == core.ConditionTrue {
 		return false
 	}
 	return true

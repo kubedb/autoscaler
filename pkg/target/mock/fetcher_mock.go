@@ -46,7 +46,7 @@ func (_m *MockVpaTargetSelectorFetcher) EXPECT() *_MockVpaTargetSelectorFetcherR
 }
 
 // Fetch enables configuring expectations on Fetch method
-func (_m *MockVpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalPodAutoscaler) (labels.Selector, error) {
+func (_m *MockVpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalAutoscaler) (labels.Selector, error) {
 	ret := _m.ctrl.Call(_m, "Fetch", vpa)
 	ret0, _ := ret[0].(labels.Selector)
 	ret1, _ := ret[1].(error)

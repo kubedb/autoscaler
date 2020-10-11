@@ -67,7 +67,7 @@ type recommender struct {
 	checkpointWriter              checkpoint.CheckpointWriter
 	checkpointsGCInterval         time.Duration
 	lastCheckpointGC              time.Time
-	vpaClient                     vpa_api.VerticalPodAutoscalersGetter
+	vpaClient                     vpa_api.VerticalAutoscalersGetter
 	podResourceRecommender        logic.PodResourceRecommender
 	useCheckpoints                bool
 	lastAggregateContainerStateGC time.Time
@@ -119,7 +119,7 @@ func (r *recommender) UpdateVPAs() {
 		cnt.Add(vpa)
 
 		_, err := vpa_utils.UpdateVpaStatusIfNeeded(
-			r.vpaClient.VerticalPodAutoscalers(vpa.ID.Namespace), vpa.ID.VpaName, vpa.AsStatus(), &observedVpa.Status)
+			r.vpaClient.VerticalAutoscalers(vpa.ID.Namespace), vpa.ID.VpaName, vpa.AsStatus(), &observedVpa.Status)
 		if err != nil {
 			klog.Errorf(
 				"Cannot update VPA %v object. Reason: %+v", vpa.ID.VpaName, err)
@@ -211,7 +211,7 @@ type RecommenderFactory struct {
 	ClusterStateFeeder     input.ClusterStateFeeder
 	CheckpointWriter       checkpoint.CheckpointWriter
 	PodResourceRecommender logic.PodResourceRecommender
-	VpaClient              vpa_api.VerticalPodAutoscalersGetter
+	VpaClient              vpa_api.VerticalAutoscalersGetter
 
 	CheckpointsGCInterval time.Duration
 	UseCheckpoints        bool
@@ -243,8 +243,8 @@ func NewRecommender(config *rest.Config, checkpointsGCInterval time.Duration, us
 	return RecommenderFactory{
 		ClusterState:           clusterState,
 		ClusterStateFeeder:     input.NewClusterStateFeeder(config, clusterState, *memorySaver, namespace),
-		CheckpointWriter:       checkpoint.NewCheckpointWriter(clusterState, vpa_clientset.NewForConfigOrDie(config).AutoscalingV1()),
-		VpaClient:              vpa_clientset.NewForConfigOrDie(config).AutoscalingV1(),
+		CheckpointWriter:       checkpoint.NewCheckpointWriter(clusterState, vpa_clientset.NewForConfigOrDie(config).AutoscalingV1alpha1()),
+		VpaClient:              vpa_clientset.NewForConfigOrDie(config).AutoscalingV1alpha1(),
 		PodResourceRecommender: logic.CreatePodResourceRecommender(),
 		CheckpointsGCInterval:  checkpointsGCInterval,
 		UseCheckpoints:         useCheckpoints,

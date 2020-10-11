@@ -154,19 +154,19 @@ func testRunOnceBase(
 	}
 
 	factory := &fakeEvictFactory{eviction}
-	vpaLister := &test.VerticalPodAutoscalerListerMock{}
+	vpaLister := &test.VerticalAutoscalerListerMock{}
 
 	podLister := &test.PodListerMock{}
 	podLister.On("List").Return(pods, nil)
 
-	vpaObj := test.VerticalPodAutoscaler().
+	vpaObj := test.VerticalAutoscaler().
 		WithContainer(containerName).
 		WithTarget("2", "200M").
 		WithMinAllowed("1", "100M").
 		WithMaxAllowed("3", "1G").
 		Get()
 	vpaObj.Spec.UpdatePolicy = &vpa_types.PodUpdatePolicy{UpdateMode: &updateMode}
-	vpaLister.On("List").Return([]*vpa_types.VerticalPodAutoscaler{vpaObj}, nil).Once()
+	vpaLister.On("List").Return([]*vpa_types.VerticalAutoscaler{vpaObj}, nil).Once()
 
 	mockSelectorFetcher := target_mock.NewMockVpaTargetSelectorFetcher(ctrl)
 
@@ -192,7 +192,7 @@ func testRunOnceBase(
 func TestRunOnceNotingToProcess(t *testing.T) {
 	eviction := &test.PodsEvictionRestrictionMock{}
 	factory := &fakeEvictFactory{eviction}
-	vpaLister := &test.VerticalPodAutoscalerListerMock{}
+	vpaLister := &test.VerticalAutoscalerListerMock{}
 	podLister := &test.PodListerMock{}
 	vpaLister.On("List").Return(nil, nil).Once()
 

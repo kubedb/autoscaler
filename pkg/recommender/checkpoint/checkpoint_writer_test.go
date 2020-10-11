@@ -25,7 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/recommender/model"
-
+	kmapi "kmodules.xyz/client-go/api/v1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -43,7 +43,7 @@ var (
 )
 
 func addVpa(t *testing.T, cluster *model.ClusterState, vpaID model.VpaID, selector string) *model.Vpa {
-	var apiObject vpa_types.VerticalPodAutoscaler
+	var apiObject vpa_types.VerticalAutoscaler
 	apiObject.Namespace = vpaID.Namespace
 	apiObject.Name = vpaID.VpaName
 	labelSelector, _ := metav1.ParseToLabelSelector(selector)
@@ -94,9 +94,9 @@ func TestIsFetchingHistory(t *testing.T) {
 		{
 			vpa: model.Vpa{
 				PodSelector: nil,
-				Conditions: map[vpa_types.VerticalPodAutoscalerConditionType]vpa_types.VerticalPodAutoscalerCondition{
+				Conditions: map[vpa_types.VerticalAutoscalerConditionType]kmapi.Condition{
 					vpa_types.FetchingHistory: {
-						Type:   vpa_types.FetchingHistory,
+						Type:   string(vpa_types.FetchingHistory),
 						Status: v1.ConditionFalse,
 					},
 				},
@@ -106,9 +106,9 @@ func TestIsFetchingHistory(t *testing.T) {
 		{
 			vpa: model.Vpa{
 				PodSelector: nil,
-				Conditions: map[vpa_types.VerticalPodAutoscalerConditionType]vpa_types.VerticalPodAutoscalerCondition{
+				Conditions: map[vpa_types.VerticalAutoscalerConditionType]kmapi.Condition{
 					vpa_types.FetchingHistory: {
-						Type:   vpa_types.FetchingHistory,
+						Type:   string(vpa_types.FetchingHistory),
 						Status: v1.ConditionTrue,
 					},
 				},

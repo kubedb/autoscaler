@@ -16,7 +16,7 @@
 
 outdir=`mktemp -d --tmpdir vpa-alpha-XXXXXXXXX`
 
-kubectl get verticalpodautoscalers.poc.autoscaling.k8s.io --all-namespaces --no-headers -o=custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name >${outdir}/list
+kubectl get verticalautoscalers.poc.autoscaling.k8s.io --all-namespaces --no-headers -o=custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name >${outdir}/list
 if [[ -z `cat ${outdir}/list` ]]
 then
   echo "No alpha VPA objects to store"
@@ -28,7 +28,7 @@ while read ns name
 do
   outfile=`mktemp --tmpdir=${outdir} vpa-XXXXXXXXX.yaml`
   echo "Storing converted ${ns}:${name} into ${outfile}."
-  kubectl get verticalpodautoscalers.poc.autoscaling.k8s.io -n ${ns} ${name} -o yaml >${outfile}
+  kubectl get verticalautoscalers.poc.autoscaling.k8s.io -n ${ns} ${name} -o yaml >${outfile}
   sed -i -e 's|poc.autoscaling.k8s.io/v1alpha1|autoscaling.k8s.io/v1beta1|' ${outfile}
 done <${outdir}/list
 rm ${outdir}/list

@@ -35,7 +35,7 @@ func NewFakeProcessor(priorities map[string]PodPriority) PriorityProcessor {
 	}
 }
 
-func (f *fakePriorityProcessor) GetUpdatePriority(pod *corev1.Pod, vpa *vpa_types.VerticalPodAutoscaler,
+func (f *fakePriorityProcessor) GetUpdatePriority(pod *corev1.Pod, vpa *vpa_types.VerticalAutoscaler,
 	recommendation *vpa_types.RecommendedPodResources) PodPriority {
 	prio, ok := f.priorities[pod.Name]
 	if !ok {

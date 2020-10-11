@@ -77,8 +77,8 @@ type ClusterStateFeederFactory struct {
 	ClusterState        *model.ClusterState
 	KubeClient          kube_client.Interface
 	MetricsClient       metrics.MetricsClient
-	VpaCheckpointClient vpa_api.VerticalPodAutoscalerCheckpointsGetter
-	VpaLister           vpa_lister.VerticalPodAutoscalerLister
+	VpaCheckpointClient vpa_api.VerticalAutoscalerCheckpointsGetter
+	VpaLister           vpa_lister.VerticalAutoscalerLister
 	PodLister           v1lister.PodLister
 	OOMObserver         oom.Observer
 	SelectorFetcher     target.VpaTargetSelectorFetcher
@@ -114,7 +114,7 @@ func NewClusterStateFeeder(config *rest.Config, clusterState *model.ClusterState
 		OOMObserver:         oomObserver,
 		KubeClient:          kubeClient,
 		MetricsClient:       newMetricsClient(config, namespace),
-		VpaCheckpointClient: vpa_clientset.NewForConfigOrDie(config).AutoscalingV1(),
+		VpaCheckpointClient: vpa_clientset.NewForConfigOrDie(config).AutoscalingV1alpha1(),
 		VpaLister:           vpa_api_util.NewVpasLister(vpa_clientset.NewForConfigOrDie(config), make(chan struct{}), namespace),
 		ClusterState:        clusterState,
 		SelectorFetcher:     target.NewVpaTargetSelectorFetcher(config, kubeClient, factory),
@@ -193,8 +193,8 @@ type clusterStateFeeder struct {
 	specClient          spec.SpecClient
 	metricsClient       metrics.MetricsClient
 	oomChan             <-chan oom.OomInfo
-	vpaCheckpointClient vpa_api.VerticalPodAutoscalerCheckpointsGetter
-	vpaLister           vpa_lister.VerticalPodAutoscalerLister
+	vpaCheckpointClient vpa_api.VerticalAutoscalerCheckpointsGetter
+	vpaLister           vpa_lister.VerticalAutoscalerLister
 	clusterState        *model.ClusterState
 	selectorFetcher     target.VpaTargetSelectorFetcher
 	memorySaveMode      bool
@@ -229,7 +229,7 @@ func (feeder *clusterStateFeeder) InitFromHistoryProvider(historyProvider histor
 	}
 }
 
-func (feeder *clusterStateFeeder) setVpaCheckpoint(checkpoint *vpa_types.VerticalPodAutoscalerCheckpoint) error {
+func (feeder *clusterStateFeeder) setVpaCheckpoint(checkpoint *vpa_types.VerticalAutoscalerCheckpoint) error {
 	vpaID := model.VpaID{Namespace: checkpoint.Namespace, VpaName: checkpoint.Spec.VPAObjectName}
 	vpa, exists := feeder.clusterState.Vpas[vpaID]
 	if !exists {
@@ -256,7 +256,7 @@ func (feeder *clusterStateFeeder) InitFromCheckpoints() {
 
 	for namespace := range namespaces {
 		klog.V(3).Infof("Fetching checkpoints from namespace %s", namespace)
-		checkpointList, err := feeder.vpaCheckpointClient.VerticalPodAutoscalerCheckpoints(namespace).List(context.TODO(), metav1.ListOptions{})
+		checkpointList, err := feeder.vpaCheckpointClient.VerticalAutoscalerCheckpoints(namespace).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Cannot list VPA checkpoints from namespace %v. Reason: %+v", namespace, err)
 		}
@@ -284,7 +284,7 @@ func (feeder *clusterStateFeeder) GarbageCollectCheckpoints() {
 
 	for _, namespaceItem := range namspaceList.Items {
 		namespace := namespaceItem.Name
-		checkpointList, err := feeder.vpaCheckpointClient.VerticalPodAutoscalerCheckpoints(namespace).List(context.TODO(), metav1.ListOptions{})
+		checkpointList, err := feeder.vpaCheckpointClient.VerticalAutoscalerCheckpoints(namespace).List(context.TODO(), metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Cannot list VPA checkpoints from namespace %v. Reason: %+v", namespace, err)
 		}
@@ -292,7 +292,7 @@ func (feeder *clusterStateFeeder) GarbageCollectCheckpoints() {
 			vpaID := model.VpaID{Namespace: checkpoint.Namespace, VpaName: checkpoint.Spec.VPAObjectName}
 			_, exists := feeder.clusterState.Vpas[vpaID]
 			if !exists {
-				err = feeder.vpaCheckpointClient.VerticalPodAutoscalerCheckpoints(namespace).Delete(context.TODO(), checkpoint.Name, metav1.DeleteOptions{})
+				err = feeder.vpaCheckpointClient.VerticalAutoscalerCheckpoints(namespace).Delete(context.TODO(), checkpoint.Name, metav1.DeleteOptions{})
 				if err == nil {
 					klog.V(3).Infof("Orphaned VPA checkpoint cleanup - deleting %v/%v.", namespace, checkpoint.Name)
 				} else {
@@ -441,23 +441,26 @@ func newContainerUsageSamplesWithKey(metrics *metrics.ContainerMetricsSnapshot) 
 }
 
 type condition struct {
-	conditionType vpa_types.VerticalPodAutoscalerConditionType
+	conditionType vpa_types.VerticalAutoscalerConditionType
 	delete        bool
 	message       string
 }
 
-func (feeder *clusterStateFeeder) validateTargetRef(vpa *vpa_types.VerticalPodAutoscaler) (bool, condition) {
+func (feeder *clusterStateFeeder) validateTargetRef(vpa *vpa_types.VerticalAutoscaler) (bool, condition) {
 	//
 	if vpa.Spec.TargetRef == nil {
 		return false, condition{}
 	}
-	k := controllerfetcher.ControllerKeyWithAPIVersion{
+	if vpa.Spec.TargetRef.APIGroup == nil {
+		return false, condition{}
+	}
+	k := controllerfetcher.ControllerKeyWithAPIGroup{
 		ControllerKey: controllerfetcher.ControllerKey{
 			Namespace: vpa.Namespace,
 			Kind:      vpa.Spec.TargetRef.Kind,
 			Name:      vpa.Spec.TargetRef.Name,
 		},
-		ApiVersion: vpa.Spec.TargetRef.APIVersion,
+		ApiGroup: *vpa.Spec.TargetRef.APIGroup,
 	}
 	top, err := feeder.controllerFetcher.FindTopMostWellKnownOrScalable(&k)
 	if err != nil {
@@ -472,7 +475,7 @@ func (feeder *clusterStateFeeder) validateTargetRef(vpa *vpa_types.VerticalPodAu
 	return true, condition{}
 }
 
-func (feeder *clusterStateFeeder) getSelector(vpa *vpa_types.VerticalPodAutoscaler) (labels.Selector, []condition) {
+func (feeder *clusterStateFeeder) getSelector(vpa *vpa_types.VerticalAutoscaler) (labels.Selector, []condition) {
 	selector, fetchErr := feeder.selectorFetcher.Fetch(vpa)
 	if selector != nil {
 		validTargetRef, unsupportedCondition := feeder.validateTargetRef(vpa)

@@ -100,7 +100,7 @@ func selfRegistration(clientset *kubernetes.Clientset, caCert []byte, namespace,
 						Rule: admissionregistration.Rule{
 							APIGroups:   []string{"autoscaling.k8s.io"},
 							APIVersions: []string{"*"},
-							Resources:   []string{"verticalpodautoscalers"},
+							Resources:   []string{"verticalautoscalers"},
 						},
 					},
 				},

@@ -49,7 +49,7 @@ var _ = FullVpaE2eDescribe("Pods under VPA", func() {
 	var (
 		rc           *ResourceConsumer
 		vpaClientSet *vpa_clientset.Clientset
-		vpaCRD       *vpa_types.VerticalPodAutoscaler
+		vpaCRD       *vpa_types.VerticalAutoscaler
 	)
 	replicas := 3
 
@@ -86,7 +86,7 @@ var _ = FullVpaE2eDescribe("Pods under VPA", func() {
 
 		vpaClientSet = vpa_clientset.NewForConfigOrDie(config)
 		vpaClient := vpaClientSet.AutoscalingV1()
-		_, err = vpaClient.VerticalPodAutoscalers(ns).Create(context.TODO(), vpaCRD, metav1.CreateOptions{})
+		_, err = vpaClient.VerticalAutoscalers(ns).Create(context.TODO(), vpaCRD, metav1.CreateOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 	})
@@ -126,7 +126,7 @@ var _ = FullVpaE2eDescribe("Pods under VPA", func() {
 var _ = FullVpaE2eDescribe("OOMing pods under VPA", func() {
 	var (
 		vpaClientSet *vpa_clientset.Clientset
-		vpaCRD       *vpa_types.VerticalPodAutoscaler
+		vpaCRD       *vpa_types.VerticalAutoscaler
 	)
 	const replicas = 3
 
@@ -153,7 +153,7 @@ var _ = FullVpaE2eDescribe("OOMing pods under VPA", func() {
 
 		vpaClientSet = vpa_clientset.NewForConfigOrDie(config)
 		vpaClient := vpaClientSet.AutoscalingV1()
-		_, err = vpaClient.VerticalPodAutoscalers(ns).Create(context.TODO(), vpaCRD, metav1.CreateOptions{})
+		_, err = vpaClient.VerticalAutoscalers(ns).Create(context.TODO(), vpaCRD, metav1.CreateOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
 

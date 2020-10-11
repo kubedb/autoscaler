@@ -2,15 +2,15 @@
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: verticalpodautoscalers.poc.autoscaling.k8s.io
+  name: verticalautoscalers.poc.autoscaling.k8s.io
 spec:
   group: poc.autoscaling.k8s.io
   version: v1alpha1
   scope: Namespaced
   names:
-    plural: verticalpodautoscalers
-    singular: verticalpodautoscaler
-    kind: VerticalPodAutoscaler
+    plural: verticalautoscalers
+    singular: verticalautoscaler
+    kind: VerticalAutoscaler
     shortNames:
       - vpa
   validation:
@@ -41,14 +41,14 @@ spec:
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
-  name: verticalpodautoscalercheckpoints.poc.autoscaling.k8s.io
+  name: verticalautoscalercheckpoints.poc.autoscaling.k8s.io
 spec:
   group: poc.autoscaling.k8s.io
   version: v1alpha1
   scope: Namespaced
   names:
-    plural: verticalpodautoscalercheckpoints
-    singular: verticalpodautoscalercheckpoint
-    kind: VerticalPodAutoscalerCheckpoint
+    plural: verticalautoscalercheckpoints
+    singular: verticalautoscalercheckpoint
+    kind: VerticalAutoscalerCheckpoint
     shortNames:
       - vpacheckpoint

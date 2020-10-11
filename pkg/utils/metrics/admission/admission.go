@@ -56,7 +56,7 @@ const (
 	Unknown AdmissionResource = "unknown"
 	// Pod means Kubernetes Pod
 	Pod AdmissionResource = "Pod"
-	// Vpa means VerticalPodAutoscaler object (CRD)
+	// Vpa means VerticalAutoscaler object (CRD)
 	Vpa AdmissionResource = "VPA"
 )
 

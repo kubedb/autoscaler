@@ -37,7 +37,7 @@ time.
 
 Autoscaling is configured with a
 [Custom Resource Definition object](https://kubernetes.io/docs/concepts/api-extension/custom-resources/)
-called [VerticalPodAutoscaler](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go).
+called [VerticalAutoscaler](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go).
 It allows to specify which pods should be vertically autoscaled as well as if/how the
 resource recommendations are applied.
 
@@ -166,7 +166,7 @@ You may need to add more nodes or adjust examples/hamster.yaml to use less CPU.*
 
 ```
 apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
+kind: VerticalAutoscaler
 metadata:
   name: my-app-vpa
 spec:
@@ -197,7 +197,7 @@ kubectl --namespace=kube-system logs [pod name]| grep -e '^E[0-9]\{4\}'
 
 * Check that the VPA Custom Resource Definition was created:
 ```
-kubectl get customresourcedefinition|grep verticalpodautoscalers
+kubectl get customresourcedefinition|grep verticalautoscalers
 ```
 
 ### Components of VPA

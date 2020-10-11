@@ -44,7 +44,7 @@ type fakeRecommendationProvider struct {
 	e                      error
 }
 
-func (frp *fakeRecommendationProvider) GetContainersResourcesForPod(pod *core.Pod, vpa *vpa_types.VerticalPodAutoscaler) ([]vpa_api_util.ContainerResources, vpa_api_util.ContainerToAnnotationsMap, error) {
+func (frp *fakeRecommendationProvider) GetContainersResourcesForPod(pod *core.Pod, vpa *vpa_types.VerticalAutoscaler) ([]vpa_api_util.ContainerResources, vpa_api_util.ContainerToAnnotationsMap, error) {
 	return frp.resources, frp.containerToAnnotations, frp.e
 }
 
@@ -253,7 +253,7 @@ func TestClalculatePatches_ResourceUpdates(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			frp := fakeRecommendationProvider{tc.recommendResources, tc.recommendAnnotations, tc.recommendError}
 			c := NewResourceUpdatesCalculator(&frp)
-			patches, err := c.CalculatePatches(tc.pod, test.VerticalPodAutoscaler().WithContainer("test").WithName("name").Get())
+			patches, err := c.CalculatePatches(tc.pod, test.VerticalAutoscaler().WithContainer("test").WithName("name").Get())
 			if tc.expectError == nil {
 				assert.NoError(t, err)
 			} else {
@@ -295,7 +295,7 @@ func TestGetPatches_TwoReplacementResources(t *testing.T) {
 	recommendAnnotations := vpa_api_util.ContainerToAnnotationsMap{}
 	frp := fakeRecommendationProvider{recommendResources, recommendAnnotations, nil}
 	c := NewResourceUpdatesCalculator(&frp)
-	patches, err := c.CalculatePatches(pod, test.VerticalPodAutoscaler().WithName("name").WithContainer("test").Get())
+	patches, err := c.CalculatePatches(pod, test.VerticalAutoscaler().WithName("name").WithContainer("test").Get())
 	assert.NoError(t, err)
 	// Order of updates for cpu and unobtanium depends on order of iterating a map, both possible results are valid.
 	if assert.Len(t, patches, 3, "unexpected number of patches") {

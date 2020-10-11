@@ -40,10 +40,10 @@ func (fpp *fakePodPreProcessor) Process(pod apiv1.Pod) (apiv1.Pod, error) {
 }
 
 type fakeVpaMatcher struct {
-	vpa *vpa_types.VerticalPodAutoscaler
+	vpa *vpa_types.VerticalAutoscaler
 }
 
-func (m *fakeVpaMatcher) GetMatchingVPA(_ *apiv1.Pod) *vpa_types.VerticalPodAutoscaler {
+func (m *fakeVpaMatcher) GetMatchingVPA(_ *apiv1.Pod) *vpa_types.VerticalAutoscaler {
 	return m.vpa
 }
 
@@ -52,13 +52,13 @@ type fakePatchCalculator struct {
 	err     error
 }
 
-func (c *fakePatchCalculator) CalculatePatches(_ *apiv1.Pod, _ *vpa_types.VerticalPodAutoscaler) (
+func (c *fakePatchCalculator) CalculatePatches(_ *apiv1.Pod, _ *vpa_types.VerticalAutoscaler) (
 	[]resource_admission.PatchRecord, error) {
 	return c.patches, c.err
 }
 
 func TestGetPatches(t *testing.T) {
-	testVpa := test.VerticalPodAutoscaler().WithName("name").WithContainer("testy-container").Get()
+	testVpa := test.VerticalAutoscaler().WithName("name").WithContainer("testy-container").Get()
 	testPatchRecord := resource_admission.PatchRecord{
 		Op:    "add",
 		Path:  "some/path",
@@ -73,7 +73,7 @@ func TestGetPatches(t *testing.T) {
 		name                 string
 		podJson              []byte
 		namespace            string
-		vpa                  *vpa_types.VerticalPodAutoscaler
+		vpa                  *vpa_types.VerticalAutoscaler
 		podPreProcessorError error
 		calculators          []patch.Calculator
 		expectPatches        []resource_admission.PatchRecord

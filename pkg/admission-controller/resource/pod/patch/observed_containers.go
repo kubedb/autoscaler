@@ -25,7 +25,7 @@ import (
 
 type observedContainers struct{}
 
-func (*observedContainers) CalculatePatches(pod *core.Pod, _ *vpa_types.VerticalPodAutoscaler) ([]resource_admission.PatchRecord, error) {
+func (*observedContainers) CalculatePatches(pod *core.Pod, _ *vpa_types.VerticalAutoscaler) ([]resource_admission.PatchRecord, error) {
 	vpaObservedContainersValue := annotations.GetVpaObservedContainersValue(pod)
 	return []resource_admission.PatchRecord{GetAddAnnotationPatch(annotations.VpaObservedContainersLabel, vpaObservedContainersValue)}, nil
 }

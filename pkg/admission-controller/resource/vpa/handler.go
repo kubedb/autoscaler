@@ -59,7 +59,7 @@ func (h *resourceHandler) AdmissionResource() admission.AdmissionResource {
 
 // GroupResource returns Group and Resource type this handler accepts.
 func (h *resourceHandler) GroupResource() metav1.GroupResource {
-	return metav1.GroupResource{Group: "autoscaling.k8s.io", Resource: "verticalpodautoscalers"}
+	return metav1.GroupResource{Group: "autoscaling.k8s.io", Resource: "verticalautoscalers"}
 }
 
 // DisallowIncorrectObjects decides whether incorrect objects (eg. unparsable, not passing validations) should be disallowed by Admission Server.
@@ -98,15 +98,15 @@ func (h *resourceHandler) GetPatches(ar *v1beta1.AdmissionRequest) ([]resource.P
 	return patches, nil
 }
 
-func parseVPA(raw []byte) (*vpa_types.VerticalPodAutoscaler, error) {
-	vpa := vpa_types.VerticalPodAutoscaler{}
+func parseVPA(raw []byte) (*vpa_types.VerticalAutoscaler, error) {
+	vpa := vpa_types.VerticalAutoscaler{}
 	if err := json.Unmarshal(raw, &vpa); err != nil {
 		return nil, err
 	}
 	return &vpa, nil
 }
 
-func validateVPA(vpa *vpa_types.VerticalPodAutoscaler, isCreate bool) error {
+func validateVPA(vpa *vpa_types.VerticalAutoscaler, isCreate bool) error {
 	if vpa.Spec.UpdatePolicy != nil {
 		mode := vpa.Spec.UpdatePolicy.UpdateMode
 		if mode == nil {

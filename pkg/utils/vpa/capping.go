@@ -18,7 +18,7 @@ package api
 
 import (
 	"fmt"
-
+	kmapi "kmodules.xyz/client-go/api/v1"
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
@@ -54,7 +54,7 @@ type cappingRecommendationProcessor struct {
 func (c *cappingRecommendationProcessor) Apply(
 	podRecommendation *vpa_types.RecommendedPodResources,
 	policy *vpa_types.PodResourcePolicy,
-	conditions []vpa_types.VerticalPodAutoscalerCondition,
+	conditions []kmapi.Condition,
 	pod *apiv1.Pod) (*vpa_types.RecommendedPodResources, ContainerToAnnotationsMap, error) {
 	// TODO: Annotate if request enforced by maintaining proportion with limit and allowed limit range is in conflict with policy.
 

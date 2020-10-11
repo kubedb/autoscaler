@@ -22,14 +22,14 @@ import (
 
 // PreProcessor processes the VPAs before applying default .
 type PreProcessor interface {
-	Process(vpa *vpa_types.VerticalPodAutoscaler, isCreate bool) (*vpa_types.VerticalPodAutoscaler, error)
+	Process(vpa *vpa_types.VerticalAutoscaler, isCreate bool) (*vpa_types.VerticalAutoscaler, error)
 }
 
 // noopPreProcessor leaves pods unchanged when processing
 type noopPreProcessor struct{}
 
 // Process leaves the pod unchanged
-func (p *noopPreProcessor) Process(vpa *vpa_types.VerticalPodAutoscaler, isCreate bool) (*vpa_types.VerticalPodAutoscaler, error) {
+func (p *noopPreProcessor) Process(vpa *vpa_types.VerticalAutoscaler, isCreate bool) (*vpa_types.VerticalAutoscaler, error) {
 	return vpa, nil
 }
 

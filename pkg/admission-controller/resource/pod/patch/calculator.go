@@ -24,5 +24,5 @@ import (
 
 // Calculator is capable of calculating required patches for pod.
 type Calculator interface {
-	CalculatePatches(pod *core.Pod, vpa *vpa_types.VerticalPodAutoscaler) ([]resource.PatchRecord, error)
+	CalculatePatches(pod *core.Pod, vpa *vpa_types.VerticalAutoscaler) ([]resource.PatchRecord, error)
 }

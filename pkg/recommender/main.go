@@ -68,7 +68,7 @@ var (
 func main() {
 	klog.InitFlags(nil)
 	kube_flag.InitFlags()
-	klog.V(1).Infof("Vertical Pod Autoscaler %s Recommender", common.VerticalPodAutoscalerVersion)
+	klog.V(1).Infof("Vertical Pod Autoscaler %s Recommender", common.VerticalAutoscalerVersion)
 
 	config := createKubeConfig(float32(*kubeApiQps), int(*kubeApiBurst))
 

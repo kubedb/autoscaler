@@ -70,7 +70,7 @@ const defaultResyncPeriod time.Duration = 10 * time.Minute
 func main() {
 	klog.InitFlags(nil)
 	kube_flag.InitFlags()
-	klog.V(1).Infof("Vertical Pod Autoscaler %s Updater", common.VerticalPodAutoscalerVersion)
+	klog.V(1).Infof("Vertical Pod Autoscaler %s Updater", common.VerticalAutoscalerVersion)
 
 	healthCheck := metrics.NewHealthCheck(*updaterInterval*5, true)
 	metrics.Initialize(*address, healthCheck)

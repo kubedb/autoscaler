@@ -24,7 +24,7 @@ can be inspected.
 ## Implementation
 
 The recommender is based on a model of the cluster that it builds in its memory.
-The model contains Kubernetes resources: *Pods*, *VerticalPodAutoscalers*, with
+The model contains Kubernetes resources: *Pods*, *VerticalAutoscalers*, with
 their configuration (e.g. labels) as well as other information, e.g. usage data for
 each container.
 

@@ -55,7 +55,7 @@ func TestUpdateResourceRequests(t *testing.T) {
 	containerName := "container1"
 	vpaName := "vpa1"
 	labels := map[string]string{"app": "testingApp"}
-	vpaBuilder := test.VerticalPodAutoscaler().
+	vpaBuilder := test.VerticalAutoscaler().
 		WithName(vpaName).
 		WithContainer(containerName).
 		WithTarget("2", "200Mi").
@@ -113,7 +113,7 @@ func TestUpdateResourceRequests(t *testing.T) {
 	testCases := []struct {
 		name              string
 		pod               *apiv1.Pod
-		vpa               *vpa_types.VerticalPodAutoscaler
+		vpa               *vpa_types.VerticalAutoscaler
 		expectedAction    bool
 		expectedError     error
 		expectedMem       resource.Quantity

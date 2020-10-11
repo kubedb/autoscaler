@@ -18,6 +18,7 @@ package api
 
 import (
 	"k8s.io/api/core/v1"
+	kmapi "kmodules.xyz/client-go/api/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 )
 
@@ -33,7 +34,7 @@ type sequentialRecommendationProcessor struct {
 // Apply chains calls to underlying RecommendationProcessors in order provided on object construction
 func (p *sequentialRecommendationProcessor) Apply(podRecommendation *vpa_types.RecommendedPodResources,
 	policy *vpa_types.PodResourcePolicy,
-	conditions []vpa_types.VerticalPodAutoscalerCondition,
+	conditions []kmapi.Condition,
 	pod *v1.Pod) (*vpa_types.RecommendedPodResources, ContainerToAnnotationsMap, error) {
 	recommendation := podRecommendation
 	accumulatedContainerToAnnotationsMap := ContainerToAnnotationsMap{}

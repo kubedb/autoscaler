@@ -47,7 +47,7 @@ type ClusterState struct {
 	// a warning about it.
 	EmptyVPAs map[VpaID]time.Time
 	// Observed VPAs. Used to check if there are updates needed.
-	ObservedVpas []*vpa_types.VerticalPodAutoscaler
+	ObservedVpas []*vpa_types.VerticalAutoscaler
 
 	// All container aggregations where the usage samples are stored.
 	aggregateStateMap aggregateContainerStatesMap
@@ -238,12 +238,12 @@ func (cluster *ClusterState) RecordOOM(containerID ContainerID, timestamp time.T
 // didn't yet exist. If the VPA already existed but had a different pod
 // selector, the pod selector is updated. Updates the links between the VPA and
 // all aggregations it matches.
-func (cluster *ClusterState) AddOrUpdateVpa(apiObject *vpa_types.VerticalPodAutoscaler, selector labels.Selector) error {
+func (cluster *ClusterState) AddOrUpdateVpa(apiObject *vpa_types.VerticalAutoscaler, selector labels.Selector) error {
 	vpaID := VpaID{Namespace: apiObject.Namespace, VpaName: apiObject.Name}
 	annotationsMap := apiObject.Annotations
 	conditionsMap := make(vpaConditionsMap)
 	for _, condition := range apiObject.Status.Conditions {
-		conditionsMap[condition.Type] = condition
+		conditionsMap[vpa_types.VerticalAutoscalerConditionType(condition.Type)] = condition
 	}
 	var currentRecommendation *vpa_types.RecommendedPodResources
 	if conditionsMap[vpa_types.RecommendationProvided].Status == apiv1.ConditionTrue {

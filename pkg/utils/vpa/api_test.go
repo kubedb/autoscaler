@@ -51,16 +51,16 @@ func parseLabelSelector(selector string) labels.Selector {
 }
 
 func TestUpdateVpaIfNeeded(t *testing.T) {
-	updatedVpa := test.VerticalPodAutoscaler().WithName("vpa").WithNamespace("test").WithContainer(containerName).
+	updatedVpa := test.VerticalAutoscaler().WithName("vpa").WithNamespace("test").WithContainer(containerName).
 		AppendCondition(vpa_types.RecommendationProvided, core.ConditionTrue, "reason", "msg", anytime).Get()
 	recommendation := test.Recommendation().WithContainer(containerName).WithTarget("5", "200").Get()
 	updatedVpa.Status.Recommendation = recommendation
-	observedVpaBuilder := test.VerticalPodAutoscaler().WithName("vpa").WithNamespace("test").WithContainer(containerName)
+	observedVpaBuilder := test.VerticalAutoscaler().WithName("vpa").WithNamespace("test").WithContainer(containerName)
 
 	testCases := []struct {
 		caseName       string
-		updatedVpa     *vpa_types.VerticalPodAutoscaler
-		observedVpa    *vpa_types.VerticalPodAutoscaler
+		updatedVpa     *vpa_types.VerticalAutoscaler
+		observedVpa    *vpa_types.VerticalAutoscaler
 		expectedUpdate bool
 	}{
 		{
@@ -92,8 +92,8 @@ func TestUpdateVpaIfNeeded(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.caseName, func(t *testing.T) {
-			fakeClient := vpa_fake.NewSimpleClientset(&vpa_types.VerticalPodAutoscalerList{Items: []vpa_types.VerticalPodAutoscaler{*tc.observedVpa}})
-			_, err := UpdateVpaStatusIfNeeded(fakeClient.AutoscalingV1().VerticalPodAutoscalers(tc.updatedVpa.Namespace),
+			fakeClient := vpa_fake.NewSimpleClientset(&vpa_types.VerticalAutoscalerList{Items: []vpa_types.VerticalAutoscaler{*tc.observedVpa}})
+			_, err := UpdateVpaStatusIfNeeded(fakeClient.AutoscalingV1alpha1().VerticalAutoscalers(tc.updatedVpa.Namespace),
 				tc.updatedVpa.Name, &tc.updatedVpa.Status, &tc.observedVpa.Status)
 			assert.NoError(t, err, "Unexpected error occurred.")
 			actions := fakeClient.Actions()
@@ -116,7 +116,7 @@ func TestPodMatchesVPA(t *testing.T) {
 	pod := test.Pod().WithName("test-pod").AddContainer(test.BuildTestContainer(containerName, "1", "100M")).Get()
 	pod.Labels = map[string]string{"app": "testingApp"}
 
-	vpaBuilder := test.VerticalPodAutoscaler().
+	vpaBuilder := test.VerticalAutoscaler().
 		WithContainer(containerName).
 		WithTarget("2", "200M").
 		WithMinAllowed("1", "100M").
@@ -140,7 +140,7 @@ func TestGetControllingVPAForPod(t *testing.T) {
 	pod := test.Pod().WithName("test-pod").AddContainer(test.BuildTestContainer(containerName, "1", "100M")).Get()
 	pod.Labels = map[string]string{"app": "testingApp"}
 
-	vpaBuilder := test.VerticalPodAutoscaler().
+	vpaBuilder := test.VerticalAutoscaler().
 		WithContainer(containerName).
 		WithTarget("2", "200M").
 		WithMinAllowed("1", "100M").

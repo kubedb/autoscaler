@@ -19,7 +19,7 @@ package resource
 import (
 	"k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics/admission"
+	"kubedb.dev/autoscaler/pkg/utils/metrics/admission"
 )
 
 // PatchRecord represents a single patch for modifying a resource.

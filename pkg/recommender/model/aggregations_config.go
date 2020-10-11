@@ -19,7 +19,7 @@ package model
 import (
 	"time"
 
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/util"
+	"kubedb.dev/autoscaler/pkg/recommender/util"
 )
 
 // AggregationsConfig is used to configure aggregation behaviour.

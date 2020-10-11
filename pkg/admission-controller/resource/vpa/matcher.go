@@ -19,10 +19,10 @@ package vpa
 import (
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_lister "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/listers/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/target"
-	vpa_api_util "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_lister "kubedb.dev/apimachinery/client/listers/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/target"
+	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
 	"k8s.io/klog"
 )
 

@@ -26,10 +26,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_types_v1beta1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta1"
-	vpa_lister "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/listers/autoscaling.k8s.io/v1"
-	vpa_lister_v1beta1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/listers/autoscaling.k8s.io/v1beta1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_lister "kubedb.dev/apimachinery/client/listers/autoscaling/v1alpha1"
 	"k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
 )
@@ -204,21 +202,21 @@ type VerticalPodAutoscalerV1Beta1ListerMock struct {
 }
 
 // List is a mock implementation of VerticalPodAutoscalerLister.List
-func (m *VerticalPodAutoscalerV1Beta1ListerMock) List(selector labels.Selector) (ret []*vpa_types_v1beta1.VerticalPodAutoscaler, err error) {
+func (m *VerticalPodAutoscalerV1Beta1ListerMock) List(selector labels.Selector) (ret []*vpa_types.VerticalPodAutoscaler, err error) {
 	args := m.Called()
-	var returnArg []*vpa_types_v1beta1.VerticalPodAutoscaler
+	var returnArg []*vpa_types.VerticalPodAutoscaler
 	if args.Get(0) != nil {
-		returnArg = args.Get(0).([]*vpa_types_v1beta1.VerticalPodAutoscaler)
+		returnArg = args.Get(0).([]*vpa_types.VerticalPodAutoscaler)
 	}
 	return returnArg, args.Error(1)
 }
 
 // VerticalPodAutoscalers is a mock implementation of returning a lister for namespace.
-func (m *VerticalPodAutoscalerV1Beta1ListerMock) VerticalPodAutoscalers(namespace string) vpa_lister_v1beta1.VerticalPodAutoscalerNamespaceLister {
+func (m *VerticalPodAutoscalerV1Beta1ListerMock) VerticalPodAutoscalers(namespace string) vpa_lister.VerticalPodAutoscalerNamespaceLister {
 	args := m.Called(namespace)
-	var returnArg vpa_lister_v1beta1.VerticalPodAutoscalerNamespaceLister
+	var returnArg vpa_lister.VerticalPodAutoscalerNamespaceLister
 	if args.Get(0) != nil {
-		returnArg = args.Get(0).(vpa_lister_v1beta1.VerticalPodAutoscalerNamespaceLister)
+		returnArg = args.Get(0).(vpa_lister.VerticalPodAutoscalerNamespaceLister)
 	}
 	return returnArg
 }

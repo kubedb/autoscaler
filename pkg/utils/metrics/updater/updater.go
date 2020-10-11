@@ -21,7 +21,7 @@ import (
 	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics"
+	"kubedb.dev/autoscaler/pkg/utils/metrics"
 )
 
 const (

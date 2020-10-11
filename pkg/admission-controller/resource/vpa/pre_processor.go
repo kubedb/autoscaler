@@ -17,7 +17,7 @@ limitations under the License.
 package vpa
 
 import (
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 )
 
 // PreProcessor processes the VPAs before applying default .

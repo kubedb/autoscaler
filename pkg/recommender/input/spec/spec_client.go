@@ -19,7 +19,7 @@ package spec
 import (
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
 	v1lister "k8s.io/client-go/listers/core/v1"
 )
 

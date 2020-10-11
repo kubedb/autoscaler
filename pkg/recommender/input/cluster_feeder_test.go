@@ -26,12 +26,12 @@ import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	controllerfetcher "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/input/spec"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
-	target_mock "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/target/mock"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	controllerfetcher "kubedb.dev/autoscaler/pkg/recommender/input/controller_fetcher"
+	"kubedb.dev/autoscaler/pkg/recommender/input/spec"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
+	target_mock "kubedb.dev/autoscaler/pkg/target/mock"
+	"kubedb.dev/autoscaler/pkg/utils/test"
 )
 
 type fakeControllerFetcher struct {

@@ -23,10 +23,10 @@ import (
 	"k8s.io/api/admission/v1beta1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	resource_admission "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/patch"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource/vpa"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics/admission"
+	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
+	"kubedb.dev/autoscaler/pkg/admission-controller/resource/pod/patch"
+	"kubedb.dev/autoscaler/pkg/admission-controller/resource/vpa"
+	"kubedb.dev/autoscaler/pkg/utils/metrics/admission"
 	"k8s.io/klog"
 )
 

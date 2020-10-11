@@ -22,7 +22,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
+	"kubedb.dev/autoscaler/pkg/utils/test"
 )
 
 func TestGetVpaObservedContainersValue(t *testing.T) {

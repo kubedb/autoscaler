@@ -18,9 +18,9 @@ package patch
 
 import (
 	core "k8s.io/api/core/v1"
-	resource_admission "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/annotations"
+	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/utils/annotations"
 )
 
 type observedContainers struct{}

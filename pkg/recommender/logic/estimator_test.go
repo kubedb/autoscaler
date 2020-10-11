@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/util"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
+	"kubedb.dev/autoscaler/pkg/recommender/util"
 )
 
 var (

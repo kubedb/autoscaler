@@ -29,7 +29,7 @@ import (
 	prometheusv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	prommodel "github.com/prometheus/common/model"
 
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
 )
 
 // PrometheusHistoryProviderConfig allow to select which metrics

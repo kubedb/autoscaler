@@ -29,12 +29,12 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	target_mock "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/target/mock"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/updater/eviction"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/updater/priority"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/status"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	target_mock "kubedb.dev/autoscaler/pkg/target/mock"
+	"kubedb.dev/autoscaler/pkg/updater/eviction"
+	"kubedb.dev/autoscaler/pkg/updater/priority"
+	"kubedb.dev/autoscaler/pkg/utils/status"
+	"kubedb.dev/autoscaler/pkg/utils/test"
 )
 
 func parseLabelSelector(selector string) labels.Selector {

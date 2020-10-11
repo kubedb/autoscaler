@@ -25,7 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
 )
 
 var scheme = runtime.NewScheme()

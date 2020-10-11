@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/mock"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 )
 
 // MockHistogram is a mock implementation of Histogram interface.

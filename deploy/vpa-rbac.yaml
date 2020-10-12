@@ -37,7 +37,7 @@ rules:
       - watch
       - create
   - apiGroups:
-      - "poc.autoscaling.k8s.io"
+      - "poc.autoscaling.kubedb.com"
     resources:
       - verticalautoscalers
     verbs:
@@ -46,7 +46,7 @@ rules:
       - watch
       - patch
   - apiGroups:
-      - "autoscaling.k8s.io"
+      - "autoscaling.kubedb.com"
     resources:
       - verticalautoscalers
     verbs:
@@ -61,7 +61,7 @@ metadata:
   name: system:vpa-checkpoint-actor
 rules:
   - apiGroups:
-      - "poc.autoscaling.k8s.io"
+      - "poc.autoscaling.kubedb.com"
     resources:
       - verticalautoscalercheckpoints
     verbs:
@@ -72,7 +72,7 @@ rules:
       - patch
       - delete
   - apiGroups:
-      - "autoscaling.k8s.io"
+      - "autoscaling.kubedb.com"
     resources:
       - verticalautoscalercheckpoints
     verbs:
@@ -256,7 +256,7 @@ rules:
       - get
       - list
   - apiGroups:
-      - "poc.autoscaling.k8s.io"
+      - "poc.autoscaling.kubedb.com"
     resources:
       - verticalautoscalers
     verbs:
@@ -264,7 +264,7 @@ rules:
       - list
       - watch
   - apiGroups:
-      - "autoscaling.k8s.io"
+      - "autoscaling.kubedb.com"
     resources:
       - verticalautoscalers
     verbs:

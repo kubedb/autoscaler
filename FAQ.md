@@ -60,7 +60,7 @@ Webhooks:
     Resources:
       pods
     API Groups:
-      autoscaling.k8s.io
+      autoscaling.kubedb.com
     API Versions:
       v1beta1
     Operations:

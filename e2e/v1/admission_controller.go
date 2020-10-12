@@ -516,7 +516,7 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		ginkgo.By("Setting up valid VPA object")
 		validVPA := []byte(`{
 			"kind": "VerticalAutoscaler",
-			"apiVersion": "autoscaling.k8s.io/v1",
+			"apiVersion": "autoscaling.kubedb.com/v1alpha1",
 			"metadata": {"name": "hamster-vpa-valid"},
 			"spec": {
 				"targetRef": {
@@ -536,7 +536,7 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// The invalid object differs by name and minAllowed - there is an invalid "requests" field.
 		invalidVPA := []byte(`{
 			"kind": "VerticalAutoscaler",
-			"apiVersion": "autoscaling.k8s.io/v1",
+			"apiVersion": "autoscaling.kubedb.com/v1alpha1",
 			"metadata": {"name": "hamster-vpa-invalid"},
 			"spec": {
 				"targetRef": {

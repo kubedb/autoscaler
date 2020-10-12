@@ -21,14 +21,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	vpa_fake "kubedb.dev/apimachinery/client/clientset/versioned/fake"
 	"kubedb.dev/autoscaler/pkg/utils/test"
+
+	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 const (
@@ -45,14 +46,14 @@ func init() {
 }
 
 func parseLabelSelector(selector string) labels.Selector {
-	labelSelector, _ := meta.ParseToLabelSelector(selector)
-	parsedSelector, _ := meta.LabelSelectorAsSelector(labelSelector)
+	labelSelector, _ := metav1.ParseToLabelSelector(selector)
+	parsedSelector, _ := metav1.LabelSelectorAsSelector(labelSelector)
 	return parsedSelector
 }
 
 func TestUpdateVpaIfNeeded(t *testing.T) {
 	updatedVpa := test.VerticalAutoscaler().WithName("vpa").WithNamespace("test").WithContainer(containerName).
-		AppendCondition(vpa_types.RecommendationProvided, core.ConditionTrue, "reason", "msg", anytime).Get()
+		AppendCondition(string(vpa_types.RecommendationProvided), core.ConditionTrue, "reason", "msg", anytime).Get()
 	recommendation := test.Recommendation().WithContainer(containerName).WithTarget("5", "200").Get()
 	updatedVpa.Status.Recommendation = recommendation
 	observedVpaBuilder := test.VerticalAutoscaler().WithName("vpa").WithNamespace("test").WithContainer(containerName)
@@ -67,26 +68,26 @@ func TestUpdateVpaIfNeeded(t *testing.T) {
 			caseName:   "Doesn't update if no changes.",
 			updatedVpa: updatedVpa,
 			observedVpa: observedVpaBuilder.WithTarget("5", "200").
-				AppendCondition(vpa_types.RecommendationProvided, core.ConditionTrue, "reason", "msg", anytime).Get(),
+				AppendCondition(string(vpa_types.RecommendationProvided), core.ConditionTrue, "reason", "msg", anytime).Get(),
 			expectedUpdate: false,
 		}, {
 			caseName:   "Updates on recommendation change.",
 			updatedVpa: updatedVpa,
 			observedVpa: observedVpaBuilder.WithTarget("10", "200").
-				AppendCondition(vpa_types.RecommendationProvided, core.ConditionTrue, "reason", "msg", anytime).Get(),
+				AppendCondition(string(vpa_types.RecommendationProvided), core.ConditionTrue, "reason", "msg", anytime).Get(),
 			expectedUpdate: true,
 		}, {
 			caseName:   "Updates on condition change.",
 			updatedVpa: updatedVpa,
 			observedVpa: observedVpaBuilder.WithTarget("5", "200").
-				AppendCondition(vpa_types.RecommendationProvided, core.ConditionFalse, "reason", "msg", anytime).Get(),
+				AppendCondition(string(vpa_types.RecommendationProvided), core.ConditionFalse, "reason", "msg", anytime).Get(),
 			expectedUpdate: true,
 		}, {
 			caseName:   "Updates on condition added.",
 			updatedVpa: updatedVpa,
 			observedVpa: observedVpaBuilder.WithTarget("5", "200").
-				AppendCondition(vpa_types.RecommendationProvided, core.ConditionTrue, "reason", "msg", anytime).
-				AppendCondition(vpa_types.LowConfidence, core.ConditionTrue, "reason", "msg", anytime).Get(),
+				AppendCondition(string(vpa_types.RecommendationProvided), core.ConditionTrue, "reason", "msg", anytime).
+				AppendCondition(string(vpa_types.LowConfidence), core.ConditionTrue, "reason", "msg", anytime).Get(),
 			expectedUpdate: true,
 		},
 	}

@@ -21,11 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/watch"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	vpa_clientset "kubedb.dev/apimachinery/client/clientset/versioned"
 	vpa_api "kubedb.dev/apimachinery/client/clientset/versioned/typed/autoscaling/v1alpha1"
@@ -39,6 +34,12 @@ import (
 	"kubedb.dev/autoscaler/pkg/target"
 	metrics_recommender "kubedb.dev/autoscaler/pkg/utils/metrics/recommender"
 	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/informers"
 	kube_client "k8s.io/client-go/kubernetes"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -154,7 +155,7 @@ func watchEvictionEvents(evictedEventChan <-chan watch.Event, observer oom.Obser
 			return
 		}
 		if evictedEvent.Type == watch.Added {
-			evictedEvent, ok := evictedEvent.Object.(*apiv1.Event)
+			evictedEvent, ok := evictedEvent.Object.(*core.Event)
 			if !ok {
 				continue
 			}
@@ -165,11 +166,11 @@ func watchEvictionEvents(evictedEventChan <-chan watch.Event, observer oom.Obser
 
 // Creates clients watching pods: PodLister (listing only not terminated pods).
 func newPodClients(kubeClient kube_client.Interface, resourceEventHandler cache.ResourceEventHandler, namespace string) v1lister.PodLister {
-	selector := fields.ParseSelectorOrDie("status.phase!=" + string(apiv1.PodPending))
+	selector := fields.ParseSelectorOrDie("status.phase!=" + string(core.PodPending))
 	podListWatch := cache.NewListWatchFromClient(kubeClient.CoreV1().RESTClient(), "pods", namespace, selector)
 	indexer, controller := cache.NewIndexerInformer(
 		podListWatch,
-		&apiv1.Pod{},
+		&core.Pod{},
 		time.Hour,
 		resourceEventHandler,
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
@@ -209,7 +210,7 @@ func (feeder *clusterStateFeeder) InitFromHistoryProvider(historyProvider histor
 	}
 	for podID, podHistory := range clusterHistory {
 		klog.V(4).Infof("Adding pod %v with labels %v", podID, podHistory.LastLabels)
-		feeder.clusterState.AddOrUpdatePod(podID, podHistory.LastLabels, apiv1.PodUnknown)
+		feeder.clusterState.AddOrUpdatePod(podID, podHistory.LastLabels, core.PodUnknown)
 		for containerName, sampleList := range podHistory.Samples {
 			containerID := model.ContainerID{
 				PodID:         podID,

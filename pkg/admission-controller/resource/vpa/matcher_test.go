@@ -19,20 +19,20 @@ package vpa
 import (
 	"testing"
 
-	core "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	target_mock "kubedb.dev/autoscaler/pkg/target/mock"
 	"kubedb.dev/autoscaler/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func parseLabelSelector(selector string) labels.Selector {
-	labelSelector, _ := meta.ParseToLabelSelector(selector)
-	parsedSelector, _ := meta.LabelSelectorAsSelector(labelSelector)
+	labelSelector, _ := metav1.ParseToLabelSelector(selector)
+	parsedSelector, _ := metav1.LabelSelectorAsSelector(labelSelector)
 	return parsedSelector
 }
 

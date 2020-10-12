@@ -19,14 +19,13 @@ package limitrange
 import (
 	"testing"
 
-	apiv1 "k8s.io/api/core/v1"
-	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"kubedb.dev/autoscaler/pkg/utils/test"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes/fake"
 
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/kubernetes/fake"
 )
 
 const testNamespace = "test-namespace"
@@ -51,7 +50,7 @@ func TestNoLimitRange(t *testing.T) {
 }
 
 func TestGetContainerLimitRangeItem(t *testing.T) {
-	baseContainerLimitRange := test.LimitRange().WithName("test-lr").WithNamespace(testNamespace).WithType(apiv1.LimitTypeContainer)
+	baseContainerLimitRange := test.LimitRange().WithName("test-lr").WithNamespace(testNamespace).WithType(core.LimitTypeContainer)
 	containerLimitRangeWithMax := baseContainerLimitRange.WithMax(test.Resources("2", "2")).Get()
 	containerLimitRangeWithDefault := baseContainerLimitRange.WithDefault(test.Resources("2", "2")).Get()
 	containerLimitRangeWithMin := baseContainerLimitRange.WithMin(test.Resources("2", "2")).Get()
@@ -59,13 +58,13 @@ func TestGetContainerLimitRangeItem(t *testing.T) {
 		name           string
 		limitRanges    []runtime.Object
 		expectedErr    error
-		expectedLimits *apiv1.LimitRangeItem
+		expectedLimits *core.LimitRangeItem
 	}{
 		{
 			name: "no matching limit ranges",
 			limitRanges: []runtime.Object{
-				test.LimitRange().WithName("different-namespace").WithNamespace("different").WithType(apiv1.LimitTypeContainer).WithMax(test.Resources("2", "2")).Get(),
-				test.LimitRange().WithName("different-type").WithNamespace(testNamespace).WithType(apiv1.LimitTypePersistentVolumeClaim).WithMax(test.Resources("2", "2")).Get(),
+				test.LimitRange().WithName("different-namespace").WithNamespace("different").WithType(core.LimitTypeContainer).WithMax(test.Resources("2", "2")).Get(),
+				test.LimitRange().WithName("different-type").WithNamespace(testNamespace).WithType(core.LimitTypePersistentVolumeClaim).WithMax(test.Resources("2", "2")).Get(),
 			},
 			expectedErr:    nil,
 			expectedLimits: nil,

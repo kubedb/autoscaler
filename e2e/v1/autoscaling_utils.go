@@ -25,21 +25,19 @@ import (
 	"sync"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	"github.com/onsi/ginkgo"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
 	clientset "k8s.io/client-go/kubernetes"
+	scaleclient "k8s.io/client-go/scale"
 	"k8s.io/kubernetes/test/e2e/framework"
 	e2ekubectl "k8s.io/kubernetes/test/e2e/framework/kubectl"
 	e2erc "k8s.io/kubernetes/test/e2e/framework/rc"
 	e2eservice "k8s.io/kubernetes/test/e2e/framework/service"
 	testutils "k8s.io/kubernetes/test/utils"
-
-	"github.com/onsi/ginkgo"
-
-	scaleclient "k8s.io/client-go/scale"
 	imageutils "k8s.io/kubernetes/test/utils/image"
 )
 
@@ -334,13 +332,13 @@ func (rc *ResourceConsumer) CleanUp() {
 
 func runServiceAndWorkloadForResourceConsumer(c clientset.Interface, ns, name string, kind schema.GroupVersionKind, replicas int, cpuRequestMillis, memRequestMb int64, podAnnotations, serviceAnnotations map[string]string) {
 	ginkgo.By(fmt.Sprintf("Running consuming RC %s via %s with %v replicas", name, kind, replicas))
-	_, err := c.CoreV1().Services(ns).Create(context.TODO(), &v1.Service{
+	_, err := c.CoreV1().Services(ns).Create(context.TODO(), &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
 			Annotations: serviceAnnotations,
 		},
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{{
+		Spec: core.ServiceSpec{
+			Ports: []core.ServicePort{{
 				Port:       port,
 				TargetPort: intstr.FromInt(targetPort),
 			}},
@@ -387,12 +385,12 @@ func runServiceAndWorkloadForResourceConsumer(c clientset.Interface, ns, name st
 
 	ginkgo.By(fmt.Sprintf("Running controller"))
 	controllerName := name + "-ctrl"
-	_, err = c.CoreV1().Services(ns).Create(context.TODO(), &v1.Service{
+	_, err = c.CoreV1().Services(ns).Create(context.TODO(), &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: controllerName,
 		},
-		Spec: v1.ServiceSpec{
-			Ports: []v1.ServicePort{{
+		Spec: core.ServiceSpec{
+			Ports: []core.ServicePort{{
 				Port:       port,
 				TargetPort: intstr.FromInt(targetPort),
 			}},
@@ -404,7 +402,7 @@ func runServiceAndWorkloadForResourceConsumer(c clientset.Interface, ns, name st
 	}, metav1.CreateOptions{})
 	framework.ExpectNoError(err)
 
-	dnsClusterFirst := v1.DNSClusterFirst
+	dnsClusterFirst := core.DNSClusterFirst
 	controllerRcConfig := testutils.RCConfig{
 		Client:    c,
 		Image:     imageutils.GetE2EImage(imageutils.Agnhost),

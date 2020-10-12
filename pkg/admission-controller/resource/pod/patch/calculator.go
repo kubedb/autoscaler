@@ -17,9 +17,10 @@ limitations under the License.
 package patch
 
 import (
-	core "k8s.io/api/core/v1"
-	"kubedb.dev/autoscaler/pkg/admission-controller/resource"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/admission-controller/resource"
+
+	core "k8s.io/api/core/v1"
 )
 
 // Calculator is capable of calculating required patches for pod.

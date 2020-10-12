@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/recommender/model"
 	"kubedb.dev/autoscaler/pkg/utils/metrics"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (

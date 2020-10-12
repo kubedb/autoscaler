@@ -20,18 +20,18 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	controllerfetcher "kubedb.dev/autoscaler/pkg/recommender/input/controller_fetcher"
 	"kubedb.dev/autoscaler/pkg/recommender/input/spec"
 	"kubedb.dev/autoscaler/pkg/recommender/model"
 	target_mock "kubedb.dev/autoscaler/pkg/target/mock"
 	"kubedb.dev/autoscaler/pkg/utils/test"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 type fakeControllerFetcher struct {
@@ -64,7 +64,11 @@ const (
 	name1     = "dotaro"
 	name2     = "doseph"
 	namespace = "testNamespace"
+)
+
+var (
 	apiGroup  = "stardust"
+	apiGroup2 = "taxonomy"
 )
 
 func TestLoadPods(t *testing.T) {
@@ -73,7 +77,7 @@ func TestLoadPods(t *testing.T) {
 		name                                string
 		selector                            labels.Selector
 		fetchSelectorError                  error
-		targetRef                           *autoscalingv1.CrossVersionObjectReference
+		targetRef                           *core.TypedLocalObjectReference
 		topMostWellKnownOrScalableKey       *controllerfetcher.ControllerKeyWithAPIGroup
 		findTopMostWellKnownOrScalableError error
 		expectedSelector                    labels.Selector
@@ -102,10 +106,10 @@ func TestLoadPods(t *testing.T) {
 			name:               "targetRef selector",
 			selector:           parseLabelSelector("app = test"),
 			fetchSelectorError: nil,
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       kind,
-				Name:       name1,
-				APIVersion: apiGroup,
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     kind,
+				Name:     name1,
+				APIGroup: &apiGroup,
 			},
 			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{
@@ -132,10 +136,10 @@ func TestLoadPods(t *testing.T) {
 			selector:           nil,
 			fetchSelectorError: nil,
 			expectedSelector:   labels.Nothing(),
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       kind,
-				Name:       name1,
-				APIVersion: apiGroup,
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     kind,
+				Name:     name1,
+				APIGroup: &apiGroup,
 			},
 			expectedConfigUnsupported: &unsupportedConditionNoTargetRef,
 		},
@@ -144,10 +148,10 @@ func TestLoadPods(t *testing.T) {
 			selector:           parseLabelSelector("app = test"),
 			fetchSelectorError: nil,
 			expectedSelector:   labels.Nothing(),
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       kind,
-				Name:       name1,
-				APIVersion: apiGroup,
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     kind,
+				Name:     name1,
+				APIGroup: &apiGroup,
 			},
 			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{
@@ -164,10 +168,10 @@ func TestLoadPods(t *testing.T) {
 			selector:           parseLabelSelector("app = test"),
 			fetchSelectorError: nil,
 			expectedSelector:   labels.Nothing(),
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       "doestar",
-				Name:       "doseph-doestar",
-				APIVersion: "taxonomy",
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     "doestar",
+				Name:     "doseph-doestar",
+				APIGroup: &apiGroup2,
 			},
 			expectedConfigUnsupported:           &unsupportedConditionMudaMudaMuda,
 			findTopMostWellKnownOrScalableError: fmt.Errorf("muda muda muda"),
@@ -177,10 +181,10 @@ func TestLoadPods(t *testing.T) {
 			selector:           parseLabelSelector("app = test"),
 			fetchSelectorError: nil,
 			expectedSelector:   parseLabelSelector("app = test"),
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       kind,
-				Name:       name1,
-				APIVersion: apiGroup,
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     kind,
+				Name:     name1,
+				APIGroup: &apiGroup,
 			},
 			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{

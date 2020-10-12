@@ -21,14 +21,14 @@ import (
 	"strings"
 	"testing"
 
-	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
 	"kubedb.dev/autoscaler/pkg/utils/test"
 	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
 
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (

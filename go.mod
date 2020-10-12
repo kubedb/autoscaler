@@ -3,10 +3,13 @@ module kubedb.dev/autoscaler
 go 1.14
 
 require (
+	github.com/appscode/go v0.0.0-20201006035845-a0302ac8e3d3
 	github.com/golang/mock v1.3.1
 	github.com/prometheus/client_golang v1.7.1
 	github.com/prometheus/common v0.10.0
+	github.com/spf13/cobra v1.0.0
 	github.com/stretchr/testify v1.5.1
+	go.bytebuilders.dev/license-verifier v0.3.0
 	golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 	k8s.io/api v0.18.9
 	k8s.io/apimachinery v0.18.9
@@ -16,6 +19,7 @@ require (
 	k8s.io/metrics v0.18.9
 	k8s.io/utils v0.0.0-20200414100711-2df71ebbae66
 	kmodules.xyz/client-go v0.0.0-20201011221802-3180ab67d845
+	kmodules.xyz/custom-resources v0.0.0-20201008012351-6d8090f759d4
 	kubedb.dev/apimachinery v0.14.0-beta.3.0.20201011231523-97c32f71c3c7
 )
 

@@ -17,17 +17,17 @@ limitations under the License.
 package model
 
 import (
-	kmapi "kmodules.xyz/client-go/api/v1"
 	"testing"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	labels "k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/apimachinery/pkg/labels"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 var (
@@ -62,7 +62,7 @@ func TestUpdateConditions(t *testing.T) {
 			expectedConditions: []kmapi.Condition{
 				{
 					Type:    string(vpa_types.RecommendationProvided),
-					Status:  corev1.ConditionTrue,
+					Status:  core.ConditionTrue,
 					Reason:  "",
 					Message: "",
 				},
@@ -75,12 +75,12 @@ func TestUpdateConditions(t *testing.T) {
 			expectedConditions: []kmapi.Condition{
 				{
 					Type:    string(vpa_types.RecommendationProvided),
-					Status:  corev1.ConditionTrue,
+					Status:  core.ConditionTrue,
 					Reason:  "",
 					Message: "",
 				}, {
 					Type:    string(vpa_types.NoPodsMatched),
-					Status:  corev1.ConditionTrue,
+					Status:  core.ConditionTrue,
 					Reason:  "NoPodsMatched",
 					Message: "No pods match this VPA object",
 				},
@@ -92,7 +92,7 @@ func TestUpdateConditions(t *testing.T) {
 			expectedConditions: []kmapi.Condition{
 				{
 					Type:    string(vpa_types.RecommendationProvided),
-					Status:  corev1.ConditionFalse,
+					Status:  core.ConditionFalse,
 					Reason:  "",
 					Message: "",
 				},
@@ -104,13 +104,13 @@ func TestUpdateConditions(t *testing.T) {
 			hasRecommendation: false,
 			expectedConditions: []kmapi.Condition{
 				{
-					Type:   string(vpa_types.RecommendationProvided),
-					Status:  corev1.ConditionFalse,
+					Type:    string(vpa_types.RecommendationProvided),
+					Status:  core.ConditionFalse,
 					Reason:  "NoPodsMatched",
 					Message: "No pods match this VPA object",
 				}, {
-					Type:   string(vpa_types.NoPodsMatched),
-					Status:  corev1.ConditionTrue,
+					Type:    string(vpa_types.NoPodsMatched),
+					Status:  core.ConditionTrue,
 					Reason:  "NoPodsMatched",
 					Message: "No pods match this VPA object",
 				},
@@ -120,18 +120,18 @@ func TestUpdateConditions(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			containerName := "container"
-			vpa := NewVpa(VpaID{Namespace: "test-namespace", VpaName: "my-facourite-vpa"}, labels.Nothing(), time.Unix(0, 0))
+			vpa := NewVpa(VpaID{Namespace: "test-namespace", VpaName: "my-favorite-vpa"}, labels.Nothing(), time.Unix(0, 0))
 			if tc.hasRecommendation {
 				vpa.Recommendation = test.Recommendation().WithContainer(containerName).WithTarget("5", "200").Get()
 			}
 			vpa.UpdateConditions(tc.podsMatched)
 			for _, condition := range tc.expectedConditions {
-				assert.Contains(t, vpa.Conditions, condition.Type)
+				assert.Contains(t, vpa.Conditions, vpa_types.VerticalAutoscalerConditionType(condition.Type))
 				actualCondition := vpa.Conditions[vpa_types.VerticalAutoscalerConditionType(condition.Type)]
 				assert.Equal(t, condition.Status, actualCondition.Status, "Condition: %v", condition.Type)
 				assert.Equal(t, condition.Reason, actualCondition.Reason, "Condition: %v", condition.Type)
 				assert.Equal(t, condition.Message, actualCondition.Message, "Condition: %v", condition.Type)
-				if condition.Status == corev1.ConditionTrue {
+				if condition.Status == core.ConditionTrue {
 					assert.True(t, vpa.Conditions.ConditionActive(vpa_types.VerticalAutoscalerConditionType(condition.Type)))
 				} else {
 					assert.False(t, vpa.Conditions.ConditionActive(vpa_types.VerticalAutoscalerConditionType(condition.Type)))
@@ -153,7 +153,7 @@ func TestUpdateRecommendation(t *testing.T) {
 		name           string
 		containers     map[string]*simpleRec
 		recommendation *vpa_types.RecommendedPodResources
-		expectedLast   map[string]corev1.ResourceList
+		expectedLast   map[string]core.ResourceList
 	}{
 		{
 			name:       "New recommendation",
@@ -163,7 +163,7 @@ func TestUpdateRecommendation(t *testing.T) {
 					test.Recommendation().WithContainer("test-container").WithTarget("5", "200").GetContainerResources(),
 					test.Recommendation().WithContainer("second-container").WithTarget("200m", "3000").GetContainerResources(),
 				}},
-			expectedLast: map[string]corev1.ResourceList{
+			expectedLast: map[string]core.ResourceList{
 				"test-container":   test.Resources("5", "200"),
 				"second-container": test.Resources("200m", "3000"),
 			},
@@ -174,7 +174,7 @@ func TestUpdateRecommendation(t *testing.T) {
 				ContainerRecommendations: []vpa_types.RecommendedContainerResources{
 					test.Recommendation().WithContainer("test-container").WithTarget("10", "200").GetContainerResources(),
 				}},
-			expectedLast: map[string]corev1.ResourceList{
+			expectedLast: map[string]core.ResourceList{
 				"test-container":   test.Resources("10", "200"),
 				"second-container": test.Resources("200m", "3000"),
 			},
@@ -182,7 +182,7 @@ func TestUpdateRecommendation(t *testing.T) {
 			name:           "Recommendation for container missing",
 			containers:     map[string]*simpleRec{"test-container": nil, "second-container": nil},
 			recommendation: test.Recommendation().WithContainer("test-container").WithTarget("5", "200").Get(),
-			expectedLast: map[string]corev1.ResourceList{
+			expectedLast: map[string]core.ResourceList{
 				"test-container": test.Resources("5", "200"),
 			},
 		},
@@ -194,9 +194,9 @@ func TestUpdateRecommendation(t *testing.T) {
 			for container, rec := range tc.containers {
 				state := &AggregateContainerState{}
 				if rec != nil {
-					state.LastRecommendation = corev1.ResourceList{
-						corev1.ResourceCPU:    resource.MustParse(rec.cpu),
-						corev1.ResourceMemory: resource.MustParse(rec.mem),
+					state.LastRecommendation = core.ResourceList{
+						core.ResourceCPU:    resource.MustParse(rec.cpu),
+						core.ResourceMemory: resource.MustParse(rec.mem),
 					}
 				}
 

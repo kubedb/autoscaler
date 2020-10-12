@@ -20,8 +20,9 @@ import (
 	"fmt"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metrics_quality "kubedb.dev/autoscaler/pkg/utils/metrics/quality"
+
+	core "k8s.io/api/core/v1"
 	"k8s.io/klog"
 )
 
@@ -87,22 +88,22 @@ func (container *ContainerState) addCPUSample(sample *ContainerUsageSample) bool
 	if !sample.isValid(ResourceCPU) || !sample.MeasureStart.After(container.LastCPUSampleStart) {
 		return false // Discard invalid, duplicate or out-of-order samples.
 	}
-	container.observeQualityMetrics(sample.Usage, false, corev1.ResourceCPU)
+	container.observeQualityMetrics(sample.Usage, false, core.ResourceCPU)
 	container.aggregator.AddSample(sample)
 	container.LastCPUSampleStart = sample.MeasureStart
 	return true
 }
 
-func (container *ContainerState) observeQualityMetrics(usage ResourceAmount, isOOM bool, resource corev1.ResourceName) {
+func (container *ContainerState) observeQualityMetrics(usage ResourceAmount, isOOM bool, resource core.ResourceName) {
 	if !container.aggregator.NeedsRecommendation() {
 		return
 	}
 	updateMode := container.aggregator.GetUpdateMode()
 	var usageValue float64
 	switch resource {
-	case corev1.ResourceCPU:
+	case core.ResourceCPU:
 		usageValue = CoresFromCPUAmount(usage)
-	case corev1.ResourceMemory:
+	case core.ResourceMemory:
 		usageValue = BytesFromMemoryAmount(usage)
 	}
 	if container.aggregator.GetLastRecommendation() == nil {
@@ -116,9 +117,9 @@ func (container *ContainerState) observeQualityMetrics(usage ResourceAmount, isO
 	}
 	var recommendationValue float64
 	switch resource {
-	case corev1.ResourceCPU:
+	case core.ResourceCPU:
 		recommendationValue = float64(recommendation.MilliValue()) / 1000.0
-	case corev1.ResourceMemory:
+	case core.ResourceMemory:
 		recommendationValue = float64(recommendation.Value())
 	default:
 		klog.Warningf("Unknown resource: %v", resource)
@@ -171,7 +172,7 @@ func (container *ContainerState) addMemorySample(sample *ContainerUsageSample, i
 		container.oomPeak = 0
 		addNewPeak = true
 	}
-	container.observeQualityMetrics(sample.Usage, isOOM, corev1.ResourceMemory)
+	container.observeQualityMetrics(sample.Usage, isOOM, core.ResourceMemory)
 	if addNewPeak {
 		newPeak := ContainerUsageSample{
 			MeasureStart: container.WindowEnd,

@@ -19,16 +19,17 @@ package priority
 import (
 	"math"
 
-	apiv1 "k8s.io/api/core/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/utils/annotations"
 	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	core "k8s.io/api/core/v1"
 	"k8s.io/klog"
 )
 
 // PriorityProcessor calculates priority for pod updates.
 type PriorityProcessor interface {
-	GetUpdatePriority(pod *apiv1.Pod, vpa *vpa_types.VerticalAutoscaler,
+	GetUpdatePriority(pod *core.Pod, vpa *vpa_types.VerticalAutoscaler,
 		recommendation *vpa_types.RecommendedPodResources) PodPriority
 }
 
@@ -40,14 +41,14 @@ func NewProcessor() PriorityProcessor {
 type defaultPriorityProcessor struct {
 }
 
-func (*defaultPriorityProcessor) GetUpdatePriority(pod *apiv1.Pod, _ *vpa_types.VerticalAutoscaler,
+func (*defaultPriorityProcessor) GetUpdatePriority(pod *core.Pod, _ *vpa_types.VerticalAutoscaler,
 	recommendation *vpa_types.RecommendedPodResources) PodPriority {
 	outsideRecommendedRange := false
 	scaleUp := false
 	// Sum of requests over all containers, per resource type.
-	totalRequestPerResource := make(map[apiv1.ResourceName]int64)
+	totalRequestPerResource := make(map[core.ResourceName]int64)
 	// Sum of recommendations over all containers, per resource type.
-	totalRecommendedPerResource := make(map[apiv1.ResourceName]int64)
+	totalRecommendedPerResource := make(map[core.ResourceName]int64)
 
 	hasObservedContainers, vpaContainerSet := parseVpaObservedContainers(pod)
 

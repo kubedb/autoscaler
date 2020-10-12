@@ -19,8 +19,9 @@ package logic
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"kubedb.dev/autoscaler/pkg/recommender/model"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMinResourcesApplied(t *testing.T) {

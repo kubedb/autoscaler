@@ -20,8 +20,9 @@ package updater
 import (
 	"strconv"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"kubedb.dev/autoscaler/pkg/utils/metrics"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (

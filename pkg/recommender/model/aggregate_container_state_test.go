@@ -17,15 +17,17 @@ limitations under the License.
 package model
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/recommender/util"
+
+	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
 )
 
 var (
@@ -73,9 +75,9 @@ func addTestMemorySample(cluster *ClusterState, container ContainerID, memoryByt
 // with the same name ('app-A') together.
 func TestAggregateStateByContainerName(t *testing.T) {
 	cluster := NewClusterState()
-	cluster.AddOrUpdatePod(testPodID1, testLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID1, testLabels, core.PodRunning)
 	otherLabels := labels.Set{"label-2": "value-2"}
-	cluster.AddOrUpdatePod(testPodID2, otherLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID2, otherLabels, core.PodRunning)
 
 	// Create 4 containers: 2 with the same name and 2 with different names.
 	containers := []ContainerID{
@@ -106,9 +108,9 @@ func TestAggregateStateByContainerName(t *testing.T) {
 	assert.Contains(t, aggregateResources, "app-C")
 
 	// Expect samples from all containers to be grouped by the container name.
-	assert.Equal(t, 2, aggregateResources["app-A"].TotalSamplesCount)
-	assert.Equal(t, 1, aggregateResources["app-B"].TotalSamplesCount)
-	assert.Equal(t, 1, aggregateResources["app-C"].TotalSamplesCount)
+	assert.Equal(t, int64(2), aggregateResources["app-A"].TotalSamplesCount)
+	assert.Equal(t, int64(1), aggregateResources["app-B"].TotalSamplesCount)
+	assert.Equal(t, int64(1), aggregateResources["app-C"].TotalSamplesCount)
 
 	config := GetAggregationsConfig()
 	// Compute the expected histograms for the "app-A" containers.
@@ -143,7 +145,7 @@ func TestAggregateContainerStateSaveToCheckpoint(t *testing.T) {
 
 	assert.Equal(t, t1, checkpoint.FirstSampleStart.Time)
 	assert.Equal(t, t2, checkpoint.LastSampleStart.Time)
-	assert.Equal(t, 10, checkpoint.TotalSamplesCount)
+	assert.Equal(t, int64(10), checkpoint.TotalSamplesCount)
 
 	assert.Equal(t, SupportedCheckpointVersion, checkpoint.Version)
 
@@ -172,14 +174,14 @@ func TestAggregateContainerStateLoadFromCheckpoint(t *testing.T) {
 		LastSampleStart:   metav1.NewTime(t2),
 		TotalSamplesCount: 20,
 		MemoryHistogram: vpa_types.HistogramCheckpoint{
-			BucketWeights: map[int]uint32{
-				0: 10,
+			BucketWeights: map[json.Number]uint32{
+				"0": 10,
 			},
 			TotalWeight: 33.0,
 		},
 		CPUHistogram: vpa_types.HistogramCheckpoint{
-			BucketWeights: map[int]uint32{
-				0: 10,
+			BucketWeights: map[json.Number]uint32{
+				"0": 10,
 			},
 			TotalWeight: 44.0,
 		},
@@ -191,7 +193,7 @@ func TestAggregateContainerStateLoadFromCheckpoint(t *testing.T) {
 
 	assert.Equal(t, t1, cs.FirstSampleStart)
 	assert.Equal(t, t2, cs.LastSampleStart)
-	assert.Equal(t, 20, cs.TotalSamplesCount)
+	assert.Equal(t, int64(20), cs.TotalSamplesCount)
 	assert.False(t, cs.AggregateCPUUsage.IsEmpty())
 	assert.False(t, cs.AggregateMemoryPeaks.IsEmpty())
 }
@@ -258,19 +260,19 @@ func TestUpdateFromPolicyControlledResources(t *testing.T) {
 		{
 			name: "Explicit ControlledResources",
 			policy: &vpa_types.ContainerResourcePolicy{
-				ControlledResources: &[]apiv1.ResourceName{apiv1.ResourceCPU, apiv1.ResourceMemory},
+				ControlledResources: []core.ResourceName{core.ResourceCPU, core.ResourceMemory},
 			},
 			expected: []ResourceName{ResourceCPU, ResourceMemory},
 		}, {
 			name: "Empty ControlledResources",
 			policy: &vpa_types.ContainerResourcePolicy{
-				ControlledResources: &[]apiv1.ResourceName{},
+				ControlledResources: []core.ResourceName{},
 			},
 			expected: []ResourceName{},
 		}, {
 			name: "ControlledResources with one resource",
 			policy: &vpa_types.ContainerResourcePolicy{
-				ControlledResources: &[]apiv1.ResourceName{apiv1.ResourceMemory},
+				ControlledResources: []core.ResourceName{core.ResourceMemory},
 			},
 			expected: []ResourceName{ResourceMemory},
 		}, {

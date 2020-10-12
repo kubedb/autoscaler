@@ -21,8 +21,9 @@ import (
 	"math"
 	"time"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 var (

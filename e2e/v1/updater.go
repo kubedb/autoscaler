@@ -21,15 +21,14 @@ import (
 	"fmt"
 	"time"
 
-	autoscaling "k8s.io/api/autoscaling/v1"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/utils/status"
-	"k8s.io/kubernetes/test/e2e/framework"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/test/e2e/framework"
 )
 
 var _ = UpdaterE2eDescribe("Updater", func() {
@@ -73,11 +72,11 @@ var _ = UpdaterE2eDescribe("Updater", func() {
 	})
 })
 
-func setupPodsForEviction(f *framework.Framework) *apiv1.PodList {
-	controller := &autoscaling.CrossVersionObjectReference{
-		APIVersion: "apps/v1",
-		Kind:       "Deployment",
-		Name:       "hamster-deployment",
+func setupPodsForEviction(f *framework.Framework) *core.PodList {
+	controller := &core.TypedLocalObjectReference{
+		APIGroup: &appsGroup,
+		Kind:     "Deployment",
+		Name:     "hamster-deployment",
 	}
 	ginkgo.By(fmt.Sprintf("Setting up a hamster %v", controller.Kind))
 	setupHamsterController(f, controller.Kind, "100m", "100Mi", defaultHamsterReplicas)

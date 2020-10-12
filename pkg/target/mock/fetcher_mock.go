@@ -17,9 +17,10 @@ limitations under the License.
 package mocktarget
 
 import (
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
 	gomock "github.com/golang/mock/gomock"
 	labels "k8s.io/apimachinery/pkg/labels"
-	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 )
 
 // MockVpaTargetSelectorFetcher is a mock of VpaTargetSelectorFetcher interface

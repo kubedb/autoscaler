@@ -21,17 +21,16 @@ import (
 	"fmt"
 	"time"
 
-	autoscaling "k8s.io/api/autoscaling/v1"
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	vpa_clientset "kubedb.dev/apimachinery/client/clientset/versioned"
-	"k8s.io/kubernetes/test/e2e/framework"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/kubernetes/test/e2e/framework"
 )
 
 const (
@@ -78,14 +77,14 @@ var _ = FullVpaE2eDescribe("Pods under VPA", func() {
 		config, err := framework.LoadConfig()
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		vpaCRD = NewVPA(f, "hamster-vpa", &autoscaling.CrossVersionObjectReference{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-			Name:       "hamster",
+		vpaCRD = NewVPA(f, "hamster-vpa", &core.TypedLocalObjectReference{
+			APIGroup: &appsGroup,
+			Kind:     "Deployment",
+			Name:     "hamster",
 		})
 
 		vpaClientSet = vpa_clientset.NewForConfigOrDie(config)
-		vpaClient := vpaClientSet.AutoscalingV1()
+		vpaClient := vpaClientSet.AutoscalingV1alpha1()
 		_, err = vpaClient.VerticalAutoscalers(ns).Create(context.TODO(), vpaCRD, metav1.CreateOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -94,14 +93,14 @@ var _ = FullVpaE2eDescribe("Pods under VPA", func() {
 	ginkgo.It("have cpu requests growing with usage", func() {
 		// initial CPU usage is low so a minimal recommendation is expected
 		err := waitForResourceRequestInRangeInPods(
-			f, pollTimeout, metav1.ListOptions{LabelSelector: "name=hamster"}, apiv1.ResourceCPU,
+			f, pollTimeout, metav1.ListOptions{LabelSelector: "name=hamster"}, core.ResourceCPU,
 			ParseQuantityOrDie(minimalCPULowerBound), ParseQuantityOrDie(minimalCPUUpperBound))
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		// consume more CPU to get a higher recommendation
 		rc.ConsumeCPU(600 * replicas)
 		err = waitForResourceRequestInRangeInPods(
-			f, pollTimeout, metav1.ListOptions{LabelSelector: "name=hamster"}, apiv1.ResourceCPU,
+			f, pollTimeout, metav1.ListOptions{LabelSelector: "name=hamster"}, core.ResourceCPU,
 			ParseQuantityOrDie("500m"), ParseQuantityOrDie("1000m"))
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
@@ -109,7 +108,7 @@ var _ = FullVpaE2eDescribe("Pods under VPA", func() {
 	ginkgo.It("have memory requests growing with usage", func() {
 		// initial memory usage is low so a minimal recommendation is expected
 		err := waitForResourceRequestInRangeInPods(
-			f, pollTimeout, metav1.ListOptions{LabelSelector: "name=hamster"}, apiv1.ResourceMemory,
+			f, pollTimeout, metav1.ListOptions{LabelSelector: "name=hamster"}, core.ResourceMemory,
 			ParseQuantityOrDie(minimalMemoryLowerBound), ParseQuantityOrDie(minimalMemoryUpperBound))
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
@@ -117,7 +116,7 @@ var _ = FullVpaE2eDescribe("Pods under VPA", func() {
 		// NOTE: large range given due to unpredictability of actual memory usage
 		rc.ConsumeMem(1024 * replicas)
 		err = waitForResourceRequestInRangeInPods(
-			f, pollTimeout, metav1.ListOptions{LabelSelector: "name=hamster"}, apiv1.ResourceMemory,
+			f, pollTimeout, metav1.ListOptions{LabelSelector: "name=hamster"}, core.ResourceMemory,
 			ParseQuantityOrDie("900Mi"), ParseQuantityOrDie("4000Mi"))
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
@@ -145,14 +144,14 @@ var _ = FullVpaE2eDescribe("OOMing pods under VPA", func() {
 		config, err := framework.LoadConfig()
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-		vpaCRD = NewVPA(f, "hamster-vpa", &autoscaling.CrossVersionObjectReference{
-			APIVersion: "v1",
-			Kind:       "Deployment",
-			Name:       "hamster",
+		vpaCRD = NewVPA(f, "hamster-vpa", &core.TypedLocalObjectReference{
+			APIGroup: &appsGroup,
+			Kind:     "Deployment",
+			Name:     "hamster",
 		})
 
 		vpaClientSet = vpa_clientset.NewForConfigOrDie(config)
-		vpaClient := vpaClientSet.AutoscalingV1()
+		vpaClient := vpaClientSet.AutoscalingV1alpha1()
 		_, err = vpaClient.VerticalAutoscalers(ns).Create(context.TODO(), vpaCRD, metav1.CreateOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
@@ -163,13 +162,13 @@ var _ = FullVpaE2eDescribe("OOMing pods under VPA", func() {
 			FieldSelector: getPodSelectorExcludingDonePodsOrDie(),
 		}
 		err := waitForResourceRequestInRangeInPods(
-			f, oomTestTimeout, listOptions, apiv1.ResourceMemory,
+			f, oomTestTimeout, listOptions, core.ResourceMemory,
 			ParseQuantityOrDie("1400Mi"), ParseQuantityOrDie("10000Mi"))
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	})
 })
 
-func waitForPodsMatch(f *framework.Framework, timeout time.Duration, listOptions metav1.ListOptions, matcher func(pod apiv1.Pod) bool) error {
+func waitForPodsMatch(f *framework.Framework, timeout time.Duration, listOptions metav1.ListOptions, matcher func(pod core.Pod) bool) error {
 	return wait.PollImmediate(pollInterval, timeout, func() (bool, error) {
 
 		ns := f.Namespace.Name
@@ -199,9 +198,9 @@ func waitForPodsMatch(f *framework.Framework, timeout time.Duration, listOptions
 	})
 }
 
-func waitForResourceRequestInRangeInPods(f *framework.Framework, timeout time.Duration, listOptions metav1.ListOptions, resourceName apiv1.ResourceName, lowerBound, upperBound resource.Quantity) error {
+func waitForResourceRequestInRangeInPods(f *framework.Framework, timeout time.Duration, listOptions metav1.ListOptions, resourceName core.ResourceName, lowerBound, upperBound resource.Quantity) error {
 	err := waitForPodsMatch(f, timeout, listOptions,
-		func(pod apiv1.Pod) bool {
+		func(pod core.Pod) bool {
 			resourceRequest, found := pod.Spec.Containers[0].Resources.Requests[resourceName]
 			framework.Logf("Comparing %v request %v against range of (%v, %v)", resourceName, resourceRequest, lowerBound, upperBound)
 			return found && resourceRequest.MilliValue() > lowerBound.MilliValue() && resourceRequest.MilliValue() < upperBound.MilliValue()

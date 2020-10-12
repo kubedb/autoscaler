@@ -17,12 +17,13 @@ limitations under the License.
 package vpa
 
 import (
-	core "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	vpa_lister "kubedb.dev/apimachinery/client/listers/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/target"
 	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog"
 )
 

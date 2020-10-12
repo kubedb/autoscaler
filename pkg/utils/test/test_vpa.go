@@ -17,12 +17,13 @@ limitations under the License.
 package test
 
 import (
-	kmapi "kmodules.xyz/client-go/api/v1"
 	"time"
 
-	core "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 // VerticalAutoscalerBuilder helps building test instances of VerticalAutoscaler.
@@ -161,7 +162,7 @@ func (b *verticalPodAutoscalerBuilder) AppendCondition(conditionType string,
 		Status:             status,
 		Reason:             reason,
 		Message:            message,
-		LastTransitionTime: meta.NewTime(lastTransitionTime)})
+		LastTransitionTime: metav1.NewTime(lastTransitionTime)})
 	return &c
 }
 
@@ -188,11 +189,11 @@ func (b *verticalPodAutoscalerBuilder) Get() *vpa_types.VerticalAutoscaler {
 	}
 
 	return &vpa_types.VerticalAutoscaler{
-		ObjectMeta: meta.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Name:              b.vpaName,
 			Namespace:         b.namespace,
 			Annotations:       b.annotations,
-			CreationTimestamp: meta.NewTime(b.creationTimestamp),
+			CreationTimestamp: metav1.NewTime(b.creationTimestamp),
 		},
 		Spec: vpa_types.VerticalAutoscalerSpec{
 			UpdatePolicy:   b.updatePolicy,

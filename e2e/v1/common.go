@@ -22,21 +22,21 @@ import (
 	"fmt"
 	"time"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_clientset "kubedb.dev/apimachinery/client/clientset/versioned"
+
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-	appsv1 "k8s.io/api/apps/v1"
-	autoscaling "k8s.io/api/autoscaling/v1"
+	apps "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
-	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
-	vpa_clientset "kubedb.dev/apimachinery/client/clientset/versioned"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	framework_deployment "k8s.io/kubernetes/test/e2e/framework/deployment"
@@ -59,10 +59,13 @@ const (
 	defaultHamsterBackoffLimit = int32(10)
 )
 
-var hamsterTargetRef = &autoscaling.CrossVersionObjectReference{
-	APIVersion: "apps/v1",
-	Kind:       "Deployment",
-	Name:       "hamster-deployment",
+var appsGroup = "apps"
+var batchGroup = "batch"
+
+var hamsterTargetRef = &core.TypedLocalObjectReference{
+	APIGroup: &appsGroup,
+	Kind:     "Deployment",
+	Name:     "hamster-deployment",
 }
 
 var hamsterLabels = map[string]string{"app": "hamster"}
@@ -116,7 +119,7 @@ func GetHamsterContainerNameByIndex(i int) string {
 
 // SetupHamsterDeployment creates and installs a simple hamster deployment
 // for e2e test purposes, then makes sure the deployment is running.
-func SetupHamsterDeployment(f *framework.Framework, cpu, memory string, replicas int32) *appsv1.Deployment {
+func SetupHamsterDeployment(f *framework.Framework, cpu, memory string, replicas int32) *apps.Deployment {
 	cpuQuantity := ParseQuantityOrDie(cpu)
 	memoryQuantity := ParseQuantityOrDie(memory)
 
@@ -130,23 +133,23 @@ func SetupHamsterDeployment(f *framework.Framework, cpu, memory string, replicas
 }
 
 // NewHamsterDeployment creates a simple hamster deployment for e2e test purposes.
-func NewHamsterDeployment(f *framework.Framework) *appsv1.Deployment {
+func NewHamsterDeployment(f *framework.Framework) *apps.Deployment {
 	return NewNHamstersDeployment(f, 1)
 }
 
 // NewNHamstersDeployment creates a simple hamster deployment with n containers
 // for e2e test purposes.
-func NewNHamstersDeployment(f *framework.Framework, n int) *appsv1.Deployment {
+func NewNHamstersDeployment(f *framework.Framework, n int) *apps.Deployment {
 	if n < 1 {
 		panic("container count should be greater than 0")
 	}
 	d := framework_deployment.NewDeployment(
-		"hamster-deployment",                       /*deploymentName*/
-		defaultHamsterReplicas,                     /*replicas*/
-		hamsterLabels,                              /*podLabels*/
-		GetHamsterContainerNameByIndex(0),          /*imageName*/
-		"k8s.gcr.io/ubuntu-slim:0.1",               /*image*/
-		appsv1.RollingUpdateDeploymentStrategyType, /*strategyType*/
+		"hamster-deployment",                     /*deploymentName*/
+		defaultHamsterReplicas,                   /*replicas*/
+		hamsterLabels,                            /*podLabels*/
+		GetHamsterContainerNameByIndex(0),        /*imageName*/
+		"k8s.gcr.io/ubuntu-slim:0.1",             /*image*/
+		apps.RollingUpdateDeploymentStrategyType, /*strategyType*/
 	)
 	d.ObjectMeta.Namespace = f.Namespace.Name
 	d.Spec.Template.Spec.Containers[0].Command = []string{"/bin/sh"}
@@ -160,11 +163,11 @@ func NewNHamstersDeployment(f *framework.Framework, n int) *appsv1.Deployment {
 
 // NewHamsterDeploymentWithResources creates a simple hamster deployment with specific
 // resource requests for e2e test purposes.
-func NewHamsterDeploymentWithResources(f *framework.Framework, cpuQuantity, memoryQuantity resource.Quantity) *appsv1.Deployment {
+func NewHamsterDeploymentWithResources(f *framework.Framework, cpuQuantity, memoryQuantity resource.Quantity) *apps.Deployment {
 	d := NewHamsterDeployment(f)
-	d.Spec.Template.Spec.Containers[0].Resources.Requests = apiv1.ResourceList{
-		apiv1.ResourceCPU:    cpuQuantity,
-		apiv1.ResourceMemory: memoryQuantity,
+	d.Spec.Template.Spec.Containers[0].Resources.Requests = core.ResourceList{
+		core.ResourceCPU:    cpuQuantity,
+		core.ResourceMemory: memoryQuantity,
 	}
 	return d
 }
@@ -173,35 +176,35 @@ func NewHamsterDeploymentWithResources(f *framework.Framework, cpuQuantity, memo
 // resource requests for e2e test purposes. Since the container in the pod specifies resource limits
 // but not resource requests K8s will set requests equal to limits and the pod will have guaranteed
 // QoS class.
-func NewHamsterDeploymentWithGuaranteedResources(f *framework.Framework, cpuQuantity, memoryQuantity resource.Quantity) *appsv1.Deployment {
+func NewHamsterDeploymentWithGuaranteedResources(f *framework.Framework, cpuQuantity, memoryQuantity resource.Quantity) *apps.Deployment {
 	d := NewHamsterDeployment(f)
-	d.Spec.Template.Spec.Containers[0].Resources.Limits = apiv1.ResourceList{
-		apiv1.ResourceCPU:    cpuQuantity,
-		apiv1.ResourceMemory: memoryQuantity,
+	d.Spec.Template.Spec.Containers[0].Resources.Limits = core.ResourceList{
+		core.ResourceCPU:    cpuQuantity,
+		core.ResourceMemory: memoryQuantity,
 	}
 	return d
 }
 
 // NewHamsterDeploymentWithResourcesAndLimits creates a simple hamster deployment with specific
 // resource requests and limits for e2e test purposes.
-func NewHamsterDeploymentWithResourcesAndLimits(f *framework.Framework, cpuQuantityRequest, memoryQuantityRequest, cpuQuantityLimit, memoryQuantityLimit resource.Quantity) *appsv1.Deployment {
+func NewHamsterDeploymentWithResourcesAndLimits(f *framework.Framework, cpuQuantityRequest, memoryQuantityRequest, cpuQuantityLimit, memoryQuantityLimit resource.Quantity) *apps.Deployment {
 	d := NewHamsterDeploymentWithResources(f, cpuQuantityRequest, memoryQuantityRequest)
-	d.Spec.Template.Spec.Containers[0].Resources.Limits = apiv1.ResourceList{
-		apiv1.ResourceCPU:    cpuQuantityLimit,
-		apiv1.ResourceMemory: memoryQuantityLimit,
+	d.Spec.Template.Spec.Containers[0].Resources.Limits = core.ResourceList{
+		core.ResourceCPU:    cpuQuantityLimit,
+		core.ResourceMemory: memoryQuantityLimit,
 	}
 	return d
 }
 
 func getPodSelectorExcludingDonePodsOrDie() string {
-	stringSelector := "status.phase!=" + string(apiv1.PodSucceeded) +
-		",status.phase!=" + string(apiv1.PodFailed)
+	stringSelector := "status.phase!=" + string(core.PodSucceeded) +
+		",status.phase!=" + string(core.PodFailed)
 	selector := fields.ParseSelectorOrDie(stringSelector)
 	return selector.String()
 }
 
 // GetHamsterPods returns running hamster pods (matched by hamsterLabels)
-func GetHamsterPods(f *framework.Framework) (*apiv1.PodList, error) {
+func GetHamsterPods(f *framework.Framework) (*core.PodList, error) {
 	label := labels.SelectorFromSet(labels.Set(hamsterLabels))
 	options := metav1.ListOptions{LabelSelector: label.String(), FieldSelector: getPodSelectorExcludingDonePodsOrDie()}
 	return f.ClientSet.CoreV1().Pods(f.Namespace.Name).List(context.TODO(), options)
@@ -226,12 +229,12 @@ func NewTestCronJob(name, schedule string) *batchv1beta1.CronJob {
 					Parallelism:  &replicas,
 					Completions:  &replicas,
 					BackoffLimit: &backoffLimit,
-					Template: apiv1.PodTemplateSpec{
+					Template: core.PodTemplateSpec{
 						ObjectMeta: metav1.ObjectMeta{
 							Labels: map[string]string{"job": name},
 						},
-						Spec: apiv1.PodSpec{
-							RestartPolicy: apiv1.RestartPolicyOnFailure,
+						Spec: core.PodSpec{
+							RestartPolicy: core.RestartPolicyOnFailure,
 						},
 					},
 				},
@@ -263,7 +266,7 @@ func getCronJob(c clientset.Interface, ns, name string) (*batchv1beta1.CronJob, 
 // SetupHamsterCronJob creates and sets up a new CronJob
 func SetupHamsterCronJob(f *framework.Framework, schedule, cpu, memory string, replicas int32) {
 	cronJob := NewTestCronJob("hamster-cronjob", schedule)
-	cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers = []apiv1.Container{SetupHamsterContainer(cpu, memory)}
+	cronJob.Spec.JobTemplate.Spec.Template.Spec.Containers = []core.Container{SetupHamsterContainer(cpu, memory)}
 	for label, value := range hamsterLabels {
 		cronJob.Spec.JobTemplate.Spec.Template.Labels[label] = value
 	}
@@ -274,17 +277,17 @@ func SetupHamsterCronJob(f *framework.Framework, schedule, cpu, memory string, r
 }
 
 // SetupHamsterContainer returns container with given amount of cpu and memory
-func SetupHamsterContainer(cpu, memory string) apiv1.Container {
+func SetupHamsterContainer(cpu, memory string) core.Container {
 	cpuQuantity := ParseQuantityOrDie(cpu)
 	memoryQuantity := ParseQuantityOrDie(memory)
 
-	return apiv1.Container{
+	return core.Container{
 		Name:  "hamster",
 		Image: "k8s.gcr.io/ubuntu-slim:0.1",
-		Resources: apiv1.ResourceRequirements{
-			Requests: apiv1.ResourceList{
-				apiv1.ResourceCPU:    cpuQuantity,
-				apiv1.ResourceMemory: memoryQuantity,
+		Resources: core.ResourceRequirements{
+			Requests: core.ResourceList{
+				core.ResourceCPU:    cpuQuantity,
+				core.ResourceMemory: memoryQuantity,
 			},
 		},
 		Command: []string{"/bin/sh"},
@@ -293,17 +296,17 @@ func SetupHamsterContainer(cpu, memory string) apiv1.Container {
 }
 
 // SetupVPA creates and installs a simple hamster VPA for e2e test purposes.
-func SetupVPA(f *framework.Framework, cpu string, mode vpa_types.UpdateMode, targetRef *autoscaling.CrossVersionObjectReference) {
+func SetupVPA(f *framework.Framework, cpu string, mode vpa_types.UpdateMode, targetRef *core.TypedLocalObjectReference) {
 	SetupVPAForNHamsters(f, 1, cpu, mode, targetRef)
 }
 
 // SetupVPAForNHamsters creates and installs a simple pod with n hamster containers for e2e test purposes.
-func SetupVPAForNHamsters(f *framework.Framework, n int, cpu string, mode vpa_types.UpdateMode, targetRef *autoscaling.CrossVersionObjectReference) {
+func SetupVPAForNHamsters(f *framework.Framework, n int, cpu string, mode vpa_types.UpdateMode, targetRef *core.TypedLocalObjectReference) {
 	vpaCRD := NewVPA(f, "hamster-vpa", targetRef)
 	vpaCRD.Spec.UpdatePolicy.UpdateMode = &mode
 
 	cpuQuantity := ParseQuantityOrDie(cpu)
-	resourceList := apiv1.ResourceList{apiv1.ResourceCPU: cpuQuantity}
+	resourceList := core.ResourceList{core.ResourceCPU: cpuQuantity}
 
 	containerRecommendations := []vpa_types.RecommendedContainerResources{}
 	for i := 0; i < n; i++ {
@@ -324,7 +327,7 @@ func SetupVPAForNHamsters(f *framework.Framework, n int, cpu string, mode vpa_ty
 }
 
 // NewVPA creates a VPA object for e2e test purposes.
-func NewVPA(f *framework.Framework, name string, targetRef *autoscaling.CrossVersionObjectReference) *vpa_types.VerticalAutoscaler {
+func NewVPA(f *framework.Framework, name string, targetRef *core.TypedLocalObjectReference) *vpa_types.VerticalAutoscaler {
 	updateMode := vpa_types.UpdateModeAuto
 	vpa := vpa_types.VerticalAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{
@@ -359,14 +362,14 @@ func getVpaClientSet(f *framework.Framework) vpa_clientset.Interface {
 // InstallVPA installs a VPA object in the test cluster.
 func InstallVPA(f *framework.Framework, vpa *vpa_types.VerticalAutoscaler) {
 	vpaClientSet := getVpaClientSet(f)
-	_, err := vpaClientSet.AutoscalingV1().VerticalAutoscalers(f.Namespace.Name).Create(context.TODO(), vpa, metav1.CreateOptions{})
+	_, err := vpaClientSet.AutoscalingV1alpha1().VerticalAutoscalers(f.Namespace.Name).Create(context.TODO(), vpa, metav1.CreateOptions{})
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "unexpected error creating VPA")
 }
 
 // InstallRawVPA installs a VPA object passed in as raw json in the test cluster.
 func InstallRawVPA(f *framework.Framework, obj interface{}) error {
 	vpaClientSet := getVpaClientSet(f)
-	err := vpaClientSet.AutoscalingV1().RESTClient().Post().
+	err := vpaClientSet.AutoscalingV1alpha1().RESTClient().Post().
 		Namespace(f.Namespace.Name).
 		Resource("verticalautoscalers").
 		Body(obj).
@@ -385,7 +388,7 @@ func PatchVpaRecommendation(f *framework.Framework, vpa *vpa_types.VerticalAutos
 		Value: *newStatus,
 	}})
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
-	_, err = getVpaClientSet(f).AutoscalingV1().VerticalAutoscalers(f.Namespace.Name).Patch(context.TODO(), vpa.Name, types.JSONPatchType, bytes, metav1.PatchOptions{})
+	_, err = getVpaClientSet(f).AutoscalingV1alpha1().VerticalAutoscalers(f.Namespace.Name).Patch(context.TODO(), vpa.Name, types.JSONPatchType, bytes, metav1.PatchOptions{})
 	gomega.Expect(err).NotTo(gomega.HaveOccurred(), "Failed to patch VPA.")
 }
 
@@ -413,7 +416,7 @@ func ParseQuantityOrDie(text string) resource.Quantity {
 type PodSet map[string]types.UID
 
 // MakePodSet converts PodList to podset for easier comparison of pod collections.
-func MakePodSet(pods *apiv1.PodList) PodSet {
+func MakePodSet(pods *core.PodList) PodSet {
 	result := make(PodSet)
 	if pods == nil {
 		return result
@@ -425,7 +428,7 @@ func MakePodSet(pods *apiv1.PodList) PodSet {
 }
 
 // WaitForPodsRestarted waits until some pods from the list are restarted.
-func WaitForPodsRestarted(f *framework.Framework, podList *apiv1.PodList) error {
+func WaitForPodsRestarted(f *framework.Framework, podList *core.PodList) error {
 	initialPodSet := MakePodSet(podList)
 
 	err := wait.PollImmediate(pollInterval, pollTimeout, func() (bool, error) {
@@ -444,7 +447,7 @@ func WaitForPodsRestarted(f *framework.Framework, podList *apiv1.PodList) error 
 }
 
 // WaitForPodsEvicted waits until some pods from the list are evicted.
-func WaitForPodsEvicted(f *framework.Framework, podList *apiv1.PodList) error {
+func WaitForPodsEvicted(f *framework.Framework, podList *core.PodList) error {
 	initialPodSet := MakePodSet(podList)
 
 	err := wait.PollImmediate(pollInterval, pollTimeout, func() (bool, error) {
@@ -508,7 +511,7 @@ func WaitForVPAMatch(c vpa_clientset.Interface, vpa *vpa_types.VerticalAutoscale
 	var polledVpa *vpa_types.VerticalAutoscaler
 	err := wait.PollImmediate(pollInterval, pollTimeout, func() (bool, error) {
 		var err error
-		polledVpa, err = c.AutoscalingV1().VerticalAutoscalers(vpa.Namespace).Get(context.TODO(), vpa.Name, metav1.GetOptions{})
+		polledVpa, err = c.AutoscalingV1alpha1().VerticalAutoscalers(vpa.Namespace).Get(context.TODO(), vpa.Name, metav1.GetOptions{})
 		if err != nil {
 			return false, err
 		}
@@ -541,46 +544,46 @@ func WaitForUncappedCPURecommendationAbove(c vpa_clientset.Interface, vpa *vpa_t
 		if vpa.Status.Recommendation == nil || len(vpa.Status.Recommendation.ContainerRecommendations) == 0 {
 			return false
 		}
-		uncappedCpu := vpa.Status.Recommendation.ContainerRecommendations[0].UncappedTarget[apiv1.ResourceCPU]
+		uncappedCpu := vpa.Status.Recommendation.ContainerRecommendations[0].UncappedTarget[core.ResourceCPU]
 		return uncappedCpu.MilliValue() > minMilliCPU
 	})
 }
 
-func installLimitRange(f *framework.Framework, minCpuLimit, minMemoryLimit, maxCpuLimit, maxMemoryLimit *resource.Quantity, lrType apiv1.LimitType) {
-	lr := &apiv1.LimitRange{
+func installLimitRange(f *framework.Framework, minCpuLimit, minMemoryLimit, maxCpuLimit, maxMemoryLimit *resource.Quantity, lrType core.LimitType) {
+	lr := &core.LimitRange{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: f.Namespace.Name,
 			Name:      "hamster-lr",
 		},
-		Spec: apiv1.LimitRangeSpec{
-			Limits: []apiv1.LimitRangeItem{},
+		Spec: core.LimitRangeSpec{
+			Limits: []core.LimitRangeItem{},
 		},
 	}
 
 	if maxMemoryLimit != nil || maxCpuLimit != nil {
-		lrItem := apiv1.LimitRangeItem{
+		lrItem := core.LimitRangeItem{
 			Type: lrType,
-			Max:  apiv1.ResourceList{},
+			Max:  core.ResourceList{},
 		}
 		if maxCpuLimit != nil {
-			lrItem.Max[apiv1.ResourceCPU] = *maxCpuLimit
+			lrItem.Max[core.ResourceCPU] = *maxCpuLimit
 		}
 		if maxMemoryLimit != nil {
-			lrItem.Max[apiv1.ResourceMemory] = *maxMemoryLimit
+			lrItem.Max[core.ResourceMemory] = *maxMemoryLimit
 		}
 		lr.Spec.Limits = append(lr.Spec.Limits, lrItem)
 	}
 
 	if minMemoryLimit != nil || minCpuLimit != nil {
-		lrItem := apiv1.LimitRangeItem{
+		lrItem := core.LimitRangeItem{
 			Type: lrType,
-			Min:  apiv1.ResourceList{},
+			Min:  core.ResourceList{},
 		}
 		if minCpuLimit != nil {
-			lrItem.Min[apiv1.ResourceCPU] = *minCpuLimit
+			lrItem.Min[core.ResourceCPU] = *minCpuLimit
 		}
 		if minMemoryLimit != nil {
-			lrItem.Min[apiv1.ResourceMemory] = *minMemoryLimit
+			lrItem.Min[core.ResourceMemory] = *minMemoryLimit
 		}
 		lr.Spec.Limits = append(lr.Spec.Limits, lrItem)
 	}
@@ -589,7 +592,7 @@ func installLimitRange(f *framework.Framework, minCpuLimit, minMemoryLimit, maxC
 }
 
 // InstallLimitRangeWithMax installs a LimitRange with a maximum limit for CPU and memory.
-func InstallLimitRangeWithMax(f *framework.Framework, maxCpuLimit, maxMemoryLimit string, lrType apiv1.LimitType) {
+func InstallLimitRangeWithMax(f *framework.Framework, maxCpuLimit, maxMemoryLimit string, lrType core.LimitType) {
 	ginkgo.By(fmt.Sprintf("Setting up LimitRange with max limits - CPU: %v, memory: %v", maxCpuLimit, maxMemoryLimit))
 	maxCpuLimitQuantity := ParseQuantityOrDie(maxCpuLimit)
 	maxMemoryLimitQuantity := ParseQuantityOrDie(maxMemoryLimit)
@@ -597,7 +600,7 @@ func InstallLimitRangeWithMax(f *framework.Framework, maxCpuLimit, maxMemoryLimi
 }
 
 // InstallLimitRangeWithMin installs a LimitRange with a minimum limit for CPU and memory.
-func InstallLimitRangeWithMin(f *framework.Framework, minCpuLimit, minMemoryLimit string, lrType apiv1.LimitType) {
+func InstallLimitRangeWithMin(f *framework.Framework, minCpuLimit, minMemoryLimit string, lrType core.LimitType) {
 	ginkgo.By(fmt.Sprintf("Setting up LimitRange with min limits - CPU: %v, memory: %v", minCpuLimit, minMemoryLimit))
 	minCpuLimitQuantity := ParseQuantityOrDie(minCpuLimit)
 	minMemoryLimitQuantity := ParseQuantityOrDie(minMemoryLimit)

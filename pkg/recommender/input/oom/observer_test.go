@@ -20,19 +20,20 @@ import (
 	"testing"
 	"time"
 
+	"kubedb.dev/autoscaler/pkg/recommender/model"
+
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"kubedb.dev/autoscaler/pkg/recommender/model"
 )
 
 var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 func init() {
-	v1.AddToScheme(scheme)
+	core.AddToScheme(scheme)
 }
 
 const pod1Yaml = `
@@ -75,22 +76,22 @@ status:
         reason: OOMKilled
 `
 
-func newPod(yaml string) (*v1.Pod, error) {
+func newPod(yaml string) (*core.Pod, error) {
 	decode := codecs.UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(yaml), nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return obj.(*v1.Pod), nil
+	return obj.(*core.Pod), nil
 }
 
-func newEvent(yaml string) (*v1.Event, error) {
+func newEvent(yaml string) (*core.Event, error) {
 	decode := codecs.UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(yaml), nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return obj.(*v1.Event), nil
+	return obj.(*core.Event), nil
 }
 
 func TestOOMReceived(t *testing.T) {

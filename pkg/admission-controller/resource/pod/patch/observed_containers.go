@@ -17,10 +17,11 @@ limitations under the License.
 package patch
 
 import (
-	core "k8s.io/api/core/v1"
-	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
 	"kubedb.dev/autoscaler/pkg/utils/annotations"
+
+	core "k8s.io/api/core/v1"
 )
 
 type observedContainers struct{}

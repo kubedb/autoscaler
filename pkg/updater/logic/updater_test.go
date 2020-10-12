@@ -22,19 +22,19 @@ import (
 	"testing"
 	"time"
 
-	"golang.org/x/time/rate"
-
-	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	target_mock "kubedb.dev/autoscaler/pkg/target/mock"
 	"kubedb.dev/autoscaler/pkg/updater/eviction"
 	"kubedb.dev/autoscaler/pkg/updater/priority"
 	"kubedb.dev/autoscaler/pkg/utils/status"
 	"kubedb.dev/autoscaler/pkg/utils/test"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
+	"golang.org/x/time/rate"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func parseLabelSelector(selector string) labels.Selector {
@@ -130,16 +130,16 @@ func testRunOnceBase(
 	labels := map[string]string{"app": "testingApp"}
 	selector := parseLabelSelector("app = testingApp")
 	containerName := "container1"
-	rc := apiv1.ReplicationController{
+	rc := core.ReplicationController{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rc",
 			Namespace: "default",
 		},
-		Spec: apiv1.ReplicationControllerSpec{
+		Spec: core.ReplicationControllerSpec{
 			Replicas: &replicas,
 		},
 	}
-	pods := make([]*apiv1.Pod, livePods)
+	pods := make([]*core.Pod, livePods)
 	eviction := &test.PodsEvictionRestrictionMock{}
 
 	for i := range pods {
@@ -229,7 +229,7 @@ type fakeEvictFactory struct {
 	evict eviction.PodsEvictionRestriction
 }
 
-func (f fakeEvictFactory) NewPodsEvictionRestriction(pods []*apiv1.Pod) eviction.PodsEvictionRestriction {
+func (f fakeEvictFactory) NewPodsEvictionRestriction(pods []*core.Pod) eviction.PodsEvictionRestriction {
 	return f.evict
 }
 

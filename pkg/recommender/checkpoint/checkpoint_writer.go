@@ -22,12 +22,13 @@ import (
 	"sort"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	vpa_api "kubedb.dev/apimachinery/client/clientset/versioned/typed/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/recommender/model"
 	api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 )
 
@@ -57,7 +58,7 @@ func isFetchingHistory(vpa *model.Vpa) bool {
 	if !found {
 		return false
 	}
-	return condition.Status == v1.ConditionTrue
+	return condition.Status == core.ConditionTrue
 }
 
 func getVpasToCheckpoint(clusterVpas map[model.VpaID]*model.Vpa) []*model.Vpa {

@@ -17,36 +17,36 @@ limitations under the License.
 package test
 
 import (
-	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PodBuilder helps building pods for tests.
 type PodBuilder interface {
 	WithName(name string) PodBuilder
-	AddContainer(container apiv1.Container) PodBuilder
+	AddContainer(container core.Container) PodBuilder
 	WithCreator(creatorObjectMeta *metav1.ObjectMeta, creatorTypeMeta *metav1.TypeMeta) PodBuilder
 	WithLabels(labels map[string]string) PodBuilder
 	WithAnnotations(annotations map[string]string) PodBuilder
-	WithPhase(phase apiv1.PodPhase) PodBuilder
-	Get() *apiv1.Pod
+	WithPhase(phase core.PodPhase) PodBuilder
+	Get() *core.Pod
 }
 
 // Pod returns new PodBuilder.
 func Pod() PodBuilder {
 	return &podBuilderImpl{
-		containers: make([]apiv1.Container, 0),
+		containers: make([]core.Container, 0),
 	}
 }
 
 type podBuilderImpl struct {
 	name              string
-	containers        []apiv1.Container
+	containers        []core.Container
 	creatorObjectMeta *metav1.ObjectMeta
 	creatorTypeMeta   *metav1.TypeMeta
 	labels            map[string]string
 	annotations       map[string]string
-	phase             apiv1.PodPhase
+	phase             core.PodPhase
 }
 
 func (pb *podBuilderImpl) WithLabels(labels map[string]string) PodBuilder {
@@ -67,7 +67,7 @@ func (pb *podBuilderImpl) WithName(name string) PodBuilder {
 	return &r
 }
 
-func (pb *podBuilderImpl) AddContainer(container apiv1.Container) PodBuilder {
+func (pb *podBuilderImpl) AddContainer(container core.Container) PodBuilder {
 	r := *pb
 	r.containers = append(r.containers, container)
 	return &r
@@ -80,23 +80,23 @@ func (pb *podBuilderImpl) WithCreator(creatorObjectMeta *metav1.ObjectMeta, crea
 	return &r
 }
 
-func (pb *podBuilderImpl) WithPhase(phase apiv1.PodPhase) PodBuilder {
+func (pb *podBuilderImpl) WithPhase(phase core.PodPhase) PodBuilder {
 	r := *pb
 	r.phase = phase
 	return &r
 }
 
-func (pb *podBuilderImpl) Get() *apiv1.Pod {
+func (pb *podBuilderImpl) Get() *core.Pod {
 	startTime := metav1.Time{testTimestamp}
-	pod := &apiv1.Pod{
+	pod := &core.Pod{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "default",
 			Name:      pb.name,
 		},
-		Spec: apiv1.PodSpec{
+		Spec: core.PodSpec{
 			Containers: pb.containers,
 		},
-		Status: apiv1.PodStatus{
+		Status: core.PodStatus{
 			StartTime: &startTime,
 		},
 	}

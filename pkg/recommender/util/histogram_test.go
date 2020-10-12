@@ -17,11 +17,14 @@ limitations under the License.
 package util
 
 import (
+	"encoding/json"
+	"strconv"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -149,8 +152,8 @@ func TestHistogramSaveToCheckpoint(t *testing.T) {
 	bucket := testHistogramOptions.FindBucket(1)
 	assert.Equal(t, 1., s.TotalWeight)
 	assert.Len(t, s.BucketWeights, 1)
-	assert.Contains(t, s.BucketWeights, bucket)
-	assert.Equal(t, MaxCheckpointWeight, s.BucketWeights[bucket])
+	assert.Contains(t, s.BucketWeights, json.Number(strconv.Itoa(bucket)))
+	assert.Equal(t, MaxCheckpointWeight, s.BucketWeights[json.Number(strconv.Itoa(bucket))])
 }
 
 func TestHistogramSaveToCheckpointDropsRelativelySmallValues(t *testing.T) {
@@ -173,8 +176,8 @@ func TestHistogramSaveToCheckpointDropsRelativelySmallValues(t *testing.T) {
 	assert.Equal(t, 100001. /*w1+w2*/, s.TotalWeight)
 	// Bucket 1 shouldn't be there
 	assert.Len(t, s.BucketWeights, 1)
-	assert.Contains(t, s.BucketWeights, bucket2)
-	assert.Equal(t, MaxCheckpointWeight, s.BucketWeights[bucket2])
+	assert.Contains(t, s.BucketWeights, json.Number(strconv.Itoa(bucket2)))
+	assert.Equal(t, MaxCheckpointWeight, s.BucketWeights[json.Number(strconv.Itoa(bucket2))])
 }
 
 func TestHistogramSaveToCheckpointForMultipleValues(t *testing.T) {
@@ -198,17 +201,17 @@ func TestHistogramSaveToCheckpointForMultipleValues(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 10051. /*w1 + w2 + w3*/, s.TotalWeight)
 	assert.Len(t, s.BucketWeights, 3)
-	assert.Equal(t, uint32(1), s.BucketWeights[bucket1])
-	assert.Equal(t, uint32(10000), s.BucketWeights[bucket2])
-	assert.Equal(t, uint32(50), s.BucketWeights[bucket3])
+	assert.Equal(t, uint32(1), s.BucketWeights[json.Number(strconv.Itoa(bucket1))])
+	assert.Equal(t, uint32(10000), s.BucketWeights[json.Number(strconv.Itoa(bucket2))])
+	assert.Equal(t, uint32(50), s.BucketWeights[json.Number(strconv.Itoa(bucket3))])
 }
 
 func TestHistogramLoadFromCheckpoint(t *testing.T) {
 	checkpoint := vpa_types.HistogramCheckpoint{
 		TotalWeight: 6.0,
-		BucketWeights: map[int]uint32{
-			0: 1,
-			1: 2,
+		BucketWeights: map[json.Number]uint32{
+			"0": 1,
+			"1": 2,
 		},
 	}
 	h := histogram{
@@ -227,8 +230,8 @@ func TestHistogramLoadFromCheckpoint(t *testing.T) {
 func TestHistogramLoadFromCheckpointReturnsErrorOnNegativeBucket(t *testing.T) {
 	checkpoint := vpa_types.HistogramCheckpoint{
 		TotalWeight: 1.0,
-		BucketWeights: map[int]uint32{
-			-1: 1,
+		BucketWeights: map[json.Number]uint32{
+			"-1": 1,
 		},
 	}
 	h := NewHistogram(testHistogramOptions)
@@ -239,8 +242,8 @@ func TestHistogramLoadFromCheckpointReturnsErrorOnNegativeBucket(t *testing.T) {
 func TestHistogramLoadFromCheckpointReturnsErrorOnInvalidBucket(t *testing.T) {
 	checkpoint := vpa_types.HistogramCheckpoint{
 		TotalWeight: 1.0,
-		BucketWeights: map[int]uint32{
-			99: 1,
+		BucketWeights: map[json.Number]uint32{
+			"99": 1,
 		},
 	}
 	h := NewHistogram(testHistogramOptions)
@@ -251,7 +254,7 @@ func TestHistogramLoadFromCheckpointReturnsErrorOnInvalidBucket(t *testing.T) {
 func TestHistogramLoadFromCheckpointReturnsErrorNegativeTotaWeight(t *testing.T) {
 	checkpoint := vpa_types.HistogramCheckpoint{
 		TotalWeight:   -1.0,
-		BucketWeights: map[int]uint32{},
+		BucketWeights: map[json.Number]uint32{},
 	}
 	h := NewHistogram(testHistogramOptions)
 	err := h.LoadFromCheckpoint(&checkpoint)

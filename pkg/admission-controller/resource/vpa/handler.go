@@ -20,11 +20,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/admission-controller/resource"
+	"kubedb.dev/autoscaler/pkg/utils/metrics/admission"
+
 	"k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"kubedb.dev/autoscaler/pkg/admission-controller/resource"
-	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
-	"kubedb.dev/autoscaler/pkg/utils/metrics/admission"
 	"k8s.io/klog"
 )
 

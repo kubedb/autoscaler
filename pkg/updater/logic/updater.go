@@ -21,11 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"golang.org/x/time/rate"
-
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	vpa_clientset "kubedb.dev/apimachinery/client/clientset/versioned"
 	vpa_lister "kubedb.dev/apimachinery/client/listers/autoscaling/v1alpha1"
@@ -35,6 +30,11 @@ import (
 	metrics_updater "kubedb.dev/autoscaler/pkg/utils/metrics/updater"
 	"kubedb.dev/autoscaler/pkg/utils/status"
 	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	"golang.org/x/time/rate"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
 	kube_client "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -165,7 +165,7 @@ func (u *updater) RunOnce(ctx context.Context) {
 	timer.ObserveStep("ListPods")
 	allLivePods := filterDeletedPods(podsList)
 
-	controlledPods := make(map[*vpa_types.VerticalAutoscaler][]*apiv1.Pod)
+	controlledPods := make(map[*vpa_types.VerticalAutoscaler][]*core.Pod)
 	for _, pod := range allLivePods {
 		controllingVPA := vpa_api_util.GetControllingVPAForPod(pod, vpas)
 		if controllingVPA != nil {
@@ -246,7 +246,7 @@ func getRateLimiter(evictionRateLimit float64, evictionRateLimitBurst int) *rate
 }
 
 // getPodsUpdateOrder returns list of pods that should be updated ordered by update priority
-func (u *updater) getPodsUpdateOrder(pods []*apiv1.Pod, vpa *vpa_types.VerticalAutoscaler) []*apiv1.Pod {
+func (u *updater) getPodsUpdateOrder(pods []*core.Pod, vpa *vpa_types.VerticalAutoscaler) []*core.Pod {
 	priorityCalculator := priority.NewUpdatePriorityCalculator(
 		vpa,
 		nil,
@@ -260,8 +260,8 @@ func (u *updater) getPodsUpdateOrder(pods []*apiv1.Pod, vpa *vpa_types.VerticalA
 	return priorityCalculator.GetSortedPods(u.evictionAdmission)
 }
 
-func filterNonEvictablePods(pods []*apiv1.Pod, evictionRestriciton eviction.PodsEvictionRestriction) []*apiv1.Pod {
-	result := make([]*apiv1.Pod, 0)
+func filterNonEvictablePods(pods []*core.Pod, evictionRestriciton eviction.PodsEvictionRestriction) []*core.Pod {
+	result := make([]*core.Pod, 0)
 	for _, pod := range pods {
 		if evictionRestriciton.CanEvict(pod) {
 			result = append(result, pod)
@@ -270,8 +270,8 @@ func filterNonEvictablePods(pods []*apiv1.Pod, evictionRestriciton eviction.Pods
 	return result
 }
 
-func filterDeletedPods(pods []*apiv1.Pod) []*apiv1.Pod {
-	result := make([]*apiv1.Pod, 0)
+func filterDeletedPods(pods []*core.Pod) []*core.Pod {
+	result := make([]*core.Pod, 0)
 	for _, pod := range pods {
 		if pod.DeletionTimestamp == nil {
 			result = append(result, pod)
@@ -282,11 +282,11 @@ func filterDeletedPods(pods []*apiv1.Pod) []*apiv1.Pod {
 
 func newPodLister(kubeClient kube_client.Interface, namespace string) v1lister.PodLister {
 	selector := fields.ParseSelectorOrDie("spec.nodeName!=" + "" + ",status.phase!=" +
-		string(apiv1.PodSucceeded) + ",status.phase!=" + string(apiv1.PodFailed))
-	podListWatch := cache.NewListWatchFromClient(kubeClient.CoreV1().RESTClient(), "pods", apiv1.NamespaceAll, selector)
+		string(core.PodSucceeded) + ",status.phase!=" + string(core.PodFailed))
+	podListWatch := cache.NewListWatchFromClient(kubeClient.CoreV1().RESTClient(), "pods", core.NamespaceAll, selector)
 	store := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	podLister := v1lister.NewPodLister(store)
-	podReflector := cache.NewReflector(podListWatch, &apiv1.Pod{}, store, time.Hour)
+	podReflector := cache.NewReflector(podListWatch, &core.Pod{}, store, time.Hour)
 	stopCh := make(chan struct{})
 	go podReflector.Run(stopCh)
 
@@ -299,5 +299,5 @@ func newEventRecorder(kubeClient kube_client.Interface) record.EventRecorder {
 	if _, isFake := kubeClient.(*fake.Clientset); !isFake {
 		eventBroadcaster.StartRecordingToSink(&clientv1.EventSinkImpl{Interface: clientv1.New(kubeClient.CoreV1().RESTClient()).Events("")})
 	}
-	return eventBroadcaster.NewRecorder(scheme.Scheme, apiv1.EventSource{Component: "vpa-updater"})
+	return eventBroadcaster.NewRecorder(scheme.Scheme, core.EventSource{Component: "vpa-updater"})
 }

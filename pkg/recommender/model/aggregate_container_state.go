@@ -40,10 +40,11 @@ import (
 	"math"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/recommender/util"
+
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // ContainerNameToAggregateStateMap maps a container name to AggregateContainerState
@@ -74,7 +75,7 @@ type ContainerStateAggregator interface {
 	SubtractSample(sample *ContainerUsageSample)
 	// GetLastRecommendation returns last recommendation calculated for this
 	// aggregator.
-	GetLastRecommendation() corev1.ResourceList
+	GetLastRecommendation() core.ResourceList
 	// NeedsRecommendation returns true if this aggregator should have
 	// a recommendation calculated.
 	NeedsRecommendation() bool
@@ -105,7 +106,7 @@ type AggregateContainerState struct {
 	// we want to know if it needs recommendation, if the recommendation
 	// is present and if the automatic updates are on (are we able to
 	// apply the recommendation to the pods).
-	LastRecommendation  corev1.ResourceList
+	LastRecommendation  core.ResourceList
 	IsUnderVPA          bool
 	UpdateMode          *vpa_types.UpdateMode
 	ScalingMode         *vpa_types.ContainerScalingMode
@@ -113,7 +114,7 @@ type AggregateContainerState struct {
 }
 
 // GetLastRecommendation returns last recorded recommendation.
-func (a *AggregateContainerState) GetLastRecommendation() corev1.ResourceList {
+func (a *AggregateContainerState) GetLastRecommendation() core.ResourceList {
 	return a.LastRecommendation
 }
 
@@ -332,7 +333,7 @@ func (p *ContainerStateAggregatorProxy) SubtractSample(sample *ContainerUsageSam
 }
 
 // GetLastRecommendation returns last recorded recommendation.
-func (p *ContainerStateAggregatorProxy) GetLastRecommendation() corev1.ResourceList {
+func (p *ContainerStateAggregatorProxy) GetLastRecommendation() core.ResourceList {
 	aggregator := p.cluster.findOrCreateAggregateContainerState(p.containerID)
 	return aggregator.GetLastRecommendation()
 }

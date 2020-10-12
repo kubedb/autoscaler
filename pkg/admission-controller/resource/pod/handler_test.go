@@ -20,22 +20,23 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"k8s.io/api/admission/v1beta1"
-	apiv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
 	"kubedb.dev/autoscaler/pkg/admission-controller/resource/pod/patch"
-	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/utils/test"
+
+	"github.com/stretchr/testify/assert"
+	"k8s.io/api/admission/v1beta1"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 type fakePodPreProcessor struct {
 	err error
 }
 
-func (fpp *fakePodPreProcessor) Process(pod apiv1.Pod) (apiv1.Pod, error) {
+func (fpp *fakePodPreProcessor) Process(pod core.Pod) (core.Pod, error) {
 	return pod, fpp.err
 }
 
@@ -43,7 +44,7 @@ type fakeVpaMatcher struct {
 	vpa *vpa_types.VerticalAutoscaler
 }
 
-func (m *fakeVpaMatcher) GetMatchingVPA(_ *apiv1.Pod) *vpa_types.VerticalAutoscaler {
+func (m *fakeVpaMatcher) GetMatchingVPA(_ *core.Pod) *vpa_types.VerticalAutoscaler {
 	return m.vpa
 }
 
@@ -52,7 +53,7 @@ type fakePatchCalculator struct {
 	err     error
 }
 
-func (c *fakePatchCalculator) CalculatePatches(_ *apiv1.Pod, _ *vpa_types.VerticalAutoscaler) (
+func (c *fakePatchCalculator) CalculatePatches(_ *core.Pod, _ *vpa_types.VerticalAutoscaler) (
 	[]resource_admission.PatchRecord, error) {
 	return c.patches, c.err
 }
@@ -177,7 +178,7 @@ func TestGetPatches(t *testing.T) {
 			fvm := &fakeVpaMatcher{vpa: tc.vpa}
 			h := NewResourceHandler(fppp, fvm, tc.calculators)
 			patches, err := h.GetPatches(&v1beta1.AdmissionRequest{
-				Resource: v1.GroupVersionResource{
+				Resource: metav1.GroupVersionResource{
 					Version: "v1",
 				},
 				Namespace: tc.namespace,

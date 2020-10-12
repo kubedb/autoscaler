@@ -20,8 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"kubedb.dev/autoscaler/pkg/recommender/util"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var (

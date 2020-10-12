@@ -17,16 +17,17 @@ limitations under the License.
 package model
 
 import (
-	kmapi "kmodules.xyz/client-go/api/v1"
 	"sort"
 	"time"
+
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	metrics_quality "kubedb.dev/autoscaler/pkg/utils/metrics/quality"
+	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
 
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
-	metrics_quality "kubedb.dev/autoscaler/pkg/utils/metrics/quality"
-	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 // Map from VPA annotation key to value.

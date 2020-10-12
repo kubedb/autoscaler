@@ -20,13 +20,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"k8s.io/api/admission/v1beta1"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
 	"kubedb.dev/autoscaler/pkg/admission-controller/resource/pod/patch"
 	"kubedb.dev/autoscaler/pkg/admission-controller/resource/vpa"
 	"kubedb.dev/autoscaler/pkg/utils/metrics/admission"
+
+	"k8s.io/api/admission/v1beta1"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog"
 )
 
@@ -68,7 +69,7 @@ func (h *resourceHandler) GetPatches(ar *v1beta1.AdmissionRequest) ([]resource_a
 		return nil, fmt.Errorf("only v1 Pods are supported")
 	}
 	raw, namespace := ar.Object.Raw, ar.Namespace
-	pod := v1.Pod{}
+	pod := core.Pod{}
 	if err := json.Unmarshal(raw, &pod); err != nil {
 		return nil, err
 	}

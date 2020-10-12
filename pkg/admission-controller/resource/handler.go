@@ -17,9 +17,10 @@ limitations under the License.
 package resource
 
 import (
+	"kubedb.dev/autoscaler/pkg/utils/metrics/admission"
+
 	"k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"kubedb.dev/autoscaler/pkg/utils/metrics/admission"
 )
 
 // PatchRecord represents a single patch for modifying a resource.

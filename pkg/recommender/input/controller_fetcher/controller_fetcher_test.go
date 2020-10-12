@@ -22,19 +22,18 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
-	appsv1 "k8s.io/api/apps/v1"
+	apps "k8s.io/api/apps/v1"
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	corev1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/restmapper"
 	scalefake "k8s.io/client-go/scale/fake"
-	core "k8s.io/client-go/testing"
+	k8stesting "k8s.io/client-go/testing"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -63,14 +62,14 @@ func simpleControllerFetcher() *controllerFetcher {
 	f.scaleNamespacer = scaleNamespacer
 
 	//return not found if if tries to find the scale subresouce on bah
-	scaleNamespacer.AddReactor("get", "bah", func(action core.Action) (handled bool, ret runtime.Object, err error) {
+	scaleNamespacer.AddReactor("get", "bah", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 		groupResource := schema.GroupResource{}
 		error := apierrors.NewNotFound(groupResource, "Foo")
 		return true, nil, error
 	})
 
 	//resource that can scale
-	scaleNamespacer.AddReactor("get", "iCanScale", func(action core.Action) (handled bool, ret runtime.Object, err error) {
+	scaleNamespacer.AddReactor("get", "iCanScale", func(action k8stesting.Action) (handled bool, ret runtime.Object, err error) {
 
 		ret = &autoscalingv1.Scale{
 			ObjectMeta: metav1.ObjectMeta{
@@ -132,7 +131,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "deployment no parent",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-deployment", Kind: "Deployment", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&appsv1.Deployment{
+			objects: []runtime.Object{&apps.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "Deployment",
 				},
@@ -149,7 +148,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "deployment with parent",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-rs", Kind: "ReplicaSet", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&appsv1.Deployment{
+			objects: []runtime.Object{&apps.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "Deployment",
 				},
@@ -157,7 +156,7 @@ func TestControllerFetcher(t *testing.T) {
 					Name:      "test-deployment",
 					Namespace: "test-namesapce",
 				},
-			}, &appsv1.ReplicaSet{
+			}, &apps.ReplicaSet{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "ReplicaSet",
 				},
@@ -181,7 +180,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "StatefulSet",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-statefulset", Kind: "StatefulSet", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&appsv1.StatefulSet{
+			objects: []runtime.Object{&apps.StatefulSet{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "StatefulSet",
 				},
@@ -198,7 +197,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "DaemonSet",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-daemonset", Kind: "DaemonSet", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&appsv1.DaemonSet{
+			objects: []runtime.Object{&apps.DaemonSet{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "DaemonSet",
 				},
@@ -264,7 +263,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "rc no parent",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-rc", Kind: "ReplicationController", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&corev1.ReplicationController{
+			objects: []runtime.Object{&core.ReplicationController{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "ReplicationController",
 				},
@@ -281,7 +280,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "deployment cycle in ownership",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-deployment", Kind: "Deployment", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&appsv1.Deployment{
+			objects: []runtime.Object{&apps.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "Deployment",
 				},
@@ -305,7 +304,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "deployment, parent with no scale subresource",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-deployment", Kind: "Deployment", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&appsv1.Deployment{
+			objects: []runtime.Object{&apps.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "Deployment",
 				},
@@ -331,7 +330,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "deployment, parent not well known with scale subresource",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-deployment", Kind: "Deployment", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&appsv1.Deployment{
+			objects: []runtime.Object{&apps.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "Deployment",
 				},
@@ -357,7 +356,7 @@ func TestControllerFetcher(t *testing.T) {
 			name: "pod, parent is node",
 			key: &ControllerKeyWithAPIGroup{ControllerKey: ControllerKey{
 				Name: "test-deployment", Kind: "Deployment", Namespace: "test-namesapce"}},
-			objects: []runtime.Object{&appsv1.Deployment{
+			objects: []runtime.Object{&apps.Deployment{
 				TypeMeta: metav1.TypeMeta{
 					Kind: "Deployment",
 				},
@@ -376,7 +375,7 @@ func TestControllerFetcher(t *testing.T) {
 				},
 			}},
 			expectedKey:   nil,
-			expectedError: fmt.Errorf("Unhandled targetRef v1 / Node / node, last error node is not a valid owner"),
+			expectedError: fmt.Errorf("Unhandled targetRef  / Node / node, last error node is not a valid owner"),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

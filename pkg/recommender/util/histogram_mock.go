@@ -19,8 +19,9 @@ package util
 import (
 	"time"
 
-	"github.com/stretchr/testify/mock"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
+	"github.com/stretchr/testify/mock"
 )
 
 // MockHistogram is a mock implementation of Histogram interface.

@@ -17,9 +17,10 @@ limitations under the License.
 package spec
 
 import (
-	"k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"kubedb.dev/autoscaler/pkg/recommender/model"
+
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	v1lister "k8s.io/client-go/listers/core/v1"
 )
 
@@ -32,7 +33,7 @@ type BasicPodSpec struct {
 	// List of containers within this pod.
 	Containers []BasicContainerSpec
 	// PodPhase describing current life cycle phase of the Pod.
-	Phase v1.PodPhase
+	Phase core.PodPhase
 }
 
 // BasicContainerSpec contains basic information defining a container.
@@ -76,7 +77,7 @@ func (client *specClient) GetPodSpecs() ([]*BasicPodSpec, error) {
 	}
 	return podSpecs, nil
 }
-func newBasicPodSpec(pod *v1.Pod) *BasicPodSpec {
+func newBasicPodSpec(pod *core.Pod) *BasicPodSpec {
 	podId := model.PodID{
 		PodName:   pod.Name,
 		Namespace: pod.Namespace,
@@ -92,7 +93,7 @@ func newBasicPodSpec(pod *v1.Pod) *BasicPodSpec {
 	return basicPodSpec
 }
 
-func newContainerSpecs(podID model.PodID, pod *v1.Pod) []BasicContainerSpec {
+func newContainerSpecs(podID model.PodID, pod *core.Pod) []BasicContainerSpec {
 	var containerSpecs []BasicContainerSpec
 
 	for _, container := range pod.Spec.Containers {
@@ -103,7 +104,7 @@ func newContainerSpecs(podID model.PodID, pod *v1.Pod) []BasicContainerSpec {
 	return containerSpecs
 }
 
-func newContainerSpec(podID model.PodID, container v1.Container) BasicContainerSpec {
+func newContainerSpec(podID model.PodID, container core.Container) BasicContainerSpec {
 	containerSpec := BasicContainerSpec{
 		ID: model.ContainerID{
 			PodID:         podID,
@@ -115,11 +116,11 @@ func newContainerSpec(podID model.PodID, container v1.Container) BasicContainerS
 	return containerSpec
 }
 
-func calculateRequestedResources(container v1.Container) model.Resources {
-	cpuQuantity := container.Resources.Requests[v1.ResourceCPU]
+func calculateRequestedResources(container core.Container) model.Resources {
+	cpuQuantity := container.Resources.Requests[core.ResourceCPU]
 	cpuMillicores := cpuQuantity.MilliValue()
 
-	memoryQuantity := container.Resources.Requests[v1.ResourceMemory]
+	memoryQuantity := container.Resources.Requests[core.ResourceMemory]
 	memoryBytes := memoryQuantity.Value()
 
 	return model.Resources{

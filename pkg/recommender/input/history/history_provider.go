@@ -23,13 +23,12 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/klog"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
 
 	promapi "github.com/prometheus/client_golang/api"
 	prometheusv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	prommodel "github.com/prometheus/common/model"
-
-	"kubedb.dev/autoscaler/pkg/recommender/model"
+	"k8s.io/klog"
 )
 
 // PrometheusHistoryProviderConfig allow to select which metrics

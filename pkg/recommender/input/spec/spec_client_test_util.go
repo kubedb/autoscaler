@@ -19,13 +19,13 @@ package spec
 import (
 	"fmt"
 
-	"github.com/stretchr/testify/mock"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
 
-	v1 "k8s.io/api/core/v1"
+	"github.com/stretchr/testify/mock"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"kubedb.dev/autoscaler/pkg/recommender/model"
 	v1lister "k8s.io/client-go/listers/core/v1"
 )
 
@@ -33,7 +33,7 @@ var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 func init() {
-	v1.AddToScheme(scheme)
+	core.AddToScheme(scheme)
 }
 
 const pod1Yaml = `
@@ -86,9 +86,9 @@ type podListerMock struct {
 	mock.Mock
 }
 
-func (m *podListerMock) List(selector labels.Selector) (ret []*v1.Pod, err error) {
+func (m *podListerMock) List(selector labels.Selector) (ret []*core.Pod, err error) {
 	args := m.Called()
-	return args.Get(0).([]*v1.Pod), args.Error(1)
+	return args.Get(0).([]*core.Pod), args.Error(1)
 }
 
 func (m *podListerMock) Pods(namespace string) v1lister.PodNamespaceLister {
@@ -154,19 +154,19 @@ func (tc *specClientTestCase) createFakeSpecClient() SpecClient {
 	return NewSpecClient(podListerMock)
 }
 
-func (tc *specClientTestCase) getFakePods() []*v1.Pod {
-	pods := []*v1.Pod{}
+func (tc *specClientTestCase) getFakePods() []*core.Pod {
+	pods := []*core.Pod{}
 	for _, yaml := range tc.podYamls {
 		pods = append(pods, newPod(yaml))
 	}
 	return pods
 }
 
-func newPod(yaml string) *v1.Pod {
+func newPod(yaml string) *core.Pod {
 	decode := codecs.UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(yaml), nil, nil)
 	if err != nil {
 		fmt.Printf("%#v", err)
 	}
-	return obj.(*v1.Pod)
+	return obj.(*core.Pod)
 }

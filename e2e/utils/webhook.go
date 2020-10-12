@@ -26,9 +26,9 @@ import (
 
 	"github.com/onsi/ginkgo"
 	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
+	apps "k8s.io/api/apps/v1"
+	core "k8s.io/api/core/v1"
+	rbac "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -69,7 +69,7 @@ func LabelNamespace(f *framework.Framework, namespace string) {
 // CreateWebhookConfigurationReadyNamespace creates a separate namespace for webhook configuration ready markers to
 // prevent cross-talk with webhook configurations being tested.
 func CreateWebhookConfigurationReadyNamespace(f *framework.Framework) {
-	ns, err := f.ClientSet.CoreV1().Namespaces().Create(context.TODO(), &v1.Namespace{
+	ns, err := f.ClientSet.CoreV1().Namespaces().Create(context.TODO(), &core.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   f.Namespace.Name + "-markers",
 			Labels: map[string]string{f.UniqueName + "-markers": "true"},
@@ -193,7 +193,7 @@ func newMutatingIsReadyWebhookFixture(f *framework.Framework, certContext *certC
 func waitWebhookConfigurationReady(f *framework.Framework) error {
 	cmClient := f.ClientSet.CoreV1().ConfigMaps(f.Namespace.Name + "-markers")
 	return wait.PollImmediate(100*time.Millisecond, 30*time.Second, func() (bool, error) {
-		marker := &v1.ConfigMap{
+		marker := &core.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: string(uuid.NewUUID()),
 				Labels: map[string]string{
@@ -221,20 +221,20 @@ func waitWebhookConfigurationReady(f *framework.Framework) error {
 func CreateAuthReaderRoleBinding(f *framework.Framework, namespace string) {
 	ginkgo.By("Create role binding to let webhook read extension-apiserver-authentication")
 	client := f.ClientSet
-	_, err := client.RbacV1().RoleBindings("kube-system").Create(context.TODO(), &rbacv1.RoleBinding{
+	_, err := client.RbacV1().RoleBindings("kube-system").Create(context.TODO(), &rbac.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: roleBindingName,
 			Annotations: map[string]string{
-				rbacv1.AutoUpdateAnnotationKey: "true",
+				rbac.AutoUpdateAnnotationKey: "true",
 			},
 		},
-		RoleRef: rbacv1.RoleRef{
+		RoleRef: rbac.RoleRef{
 			APIGroup: "",
 			Kind:     "Role",
 			Name:     "extension-apiserver-authentication-reader",
 		},
 		// Webhook uses the default service account.
-		Subjects: []rbacv1.Subject{
+		Subjects: []rbac.Subject{
 			{
 				Kind:      "ServiceAccount",
 				Name:      "default",
@@ -256,11 +256,11 @@ func DeployWebhookAndService(f *framework.Framework, image string, certContext *
 	client := f.ClientSet
 
 	// Creating the secret that contains the webhook's cert.
-	secret := &v1.Secret{
+	secret := &core.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: secretName,
 		},
-		Type: v1.SecretTypeOpaque,
+		Type: core.SecretTypeOpaque,
 		Data: map[string][]byte{
 			"tls.crt": certContext.cert,
 			"tls.key": certContext.key,
@@ -274,22 +274,22 @@ func DeployWebhookAndService(f *framework.Framework, image string, certContext *
 	podLabels := map[string]string{"app": "sample-webhook", "webhook": "true"}
 	replicas := int32(1)
 	zero := int64(0)
-	mounts := []v1.VolumeMount{
+	mounts := []core.VolumeMount{
 		{
 			Name:      "webhook-certs",
 			ReadOnly:  true,
 			MountPath: "/webhook.local.config/certificates",
 		},
 	}
-	volumes := []v1.Volume{
+	volumes := []core.Volume{
 		{
 			Name: "webhook-certs",
-			VolumeSource: v1.VolumeSource{
-				Secret: &v1.SecretVolumeSource{SecretName: secretName},
+			VolumeSource: core.VolumeSource{
+				Secret: &core.SecretVolumeSource{SecretName: secretName},
 			},
 		},
 	}
-	containers := []v1.Container{
+	containers := []core.Container{
 		{
 			Name:         "sample-webhook",
 			VolumeMounts: mounts,
@@ -302,10 +302,10 @@ func DeployWebhookAndService(f *framework.Framework, image string, certContext *
 				// Use a non-default port for containers.
 				fmt.Sprintf("--port=%d", containerPort),
 			}, params...),
-			ReadinessProbe: &v1.Probe{
-				Handler: v1.Handler{
-					HTTPGet: &v1.HTTPGetAction{
-						Scheme: v1.URISchemeHTTPS,
+			ReadinessProbe: &core.Probe{
+				Handler: core.Handler{
+					HTTPGet: &core.HTTPGetAction{
+						Scheme: core.URISchemeHTTPS,
 						Port:   intstr.FromInt(int(containerPort)),
 						Path:   "/readyz",
 					},
@@ -315,27 +315,27 @@ func DeployWebhookAndService(f *framework.Framework, image string, certContext *
 				FailureThreshold: 30,
 			},
 			Image: image,
-			Ports: []v1.ContainerPort{{ContainerPort: containerPort}},
+			Ports: []core.ContainerPort{{ContainerPort: containerPort}},
 		},
 	}
-	d := &appsv1.Deployment{
+	d := &apps.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:   deploymentName,
 			Labels: podLabels,
 		},
-		Spec: appsv1.DeploymentSpec{
+		Spec: apps.DeploymentSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podLabels,
 			},
-			Strategy: appsv1.DeploymentStrategy{
-				Type: appsv1.RollingUpdateDeploymentStrategyType,
+			Strategy: apps.DeploymentStrategy{
+				Type: apps.RollingUpdateDeploymentStrategyType,
 			},
-			Template: v1.PodTemplateSpec{
+			Template: core.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: podLabels,
 				},
-				Spec: v1.PodSpec{
+				Spec: core.PodSpec{
 					TerminationGracePeriodSeconds: &zero,
 					Containers:                    containers,
 					Volumes:                       volumes,
@@ -354,15 +354,15 @@ func DeployWebhookAndService(f *framework.Framework, image string, certContext *
 	ginkgo.By("Deploying the webhook service")
 
 	serviceLabels := map[string]string{"webhook": "true"}
-	service := &v1.Service{
+	service := &core.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      WebhookServiceName,
 			Labels:    map[string]string{"test": "webhook"},
 		},
-		Spec: v1.ServiceSpec{
+		Spec: core.ServiceSpec{
 			Selector: serviceLabels,
-			Ports: []v1.ServicePort{
+			Ports: []core.ServicePort{
 				{
 					Protocol:   "TCP",
 					Port:       servicePort,

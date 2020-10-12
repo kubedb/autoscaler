@@ -21,12 +21,13 @@ import (
 	"testing"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/recommender/model"
-	kmapi "kmodules.xyz/client-go/api/v1"
+
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 // TODO: Extract these constants to a common test module.
@@ -57,7 +58,7 @@ func addVpa(t *testing.T, cluster *model.ClusterState, vpaID model.VpaID, select
 
 func TestMergeContainerStateForCheckpointDropsRecentMemoryPeak(t *testing.T) {
 	cluster := model.NewClusterState()
-	cluster.AddOrUpdatePod(testPodID1, testLabels, v1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID1, testLabels, core.PodRunning)
 	assert.NoError(t, cluster.AddOrUpdateContainer(testContainerID1, testRequest))
 	container := cluster.GetContainer(testContainerID1)
 
@@ -97,7 +98,7 @@ func TestIsFetchingHistory(t *testing.T) {
 				Conditions: map[vpa_types.VerticalAutoscalerConditionType]kmapi.Condition{
 					vpa_types.FetchingHistory: {
 						Type:   string(vpa_types.FetchingHistory),
-						Status: v1.ConditionFalse,
+						Status: core.ConditionFalse,
 					},
 				},
 			},
@@ -109,7 +110,7 @@ func TestIsFetchingHistory(t *testing.T) {
 				Conditions: map[vpa_types.VerticalAutoscalerConditionType]kmapi.Condition{
 					vpa_types.FetchingHistory: {
 						Type:   string(vpa_types.FetchingHistory),
-						Status: v1.ConditionTrue,
+						Status: core.ConditionTrue,
 					},
 				},
 			},

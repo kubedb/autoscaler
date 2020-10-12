@@ -19,10 +19,11 @@ package recommendation
 import (
 	"fmt"
 
-	core "k8s.io/api/core/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/utils/limitrange"
 	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	core "k8s.io/api/core/v1"
 	"k8s.io/klog"
 )
 

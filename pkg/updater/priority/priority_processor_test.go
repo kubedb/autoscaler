@@ -19,19 +19,19 @@ package priority
 import (
 	"testing"
 
-	corev1 "k8s.io/api/core/v1"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/utils/annotations"
 	"kubedb.dev/autoscaler/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
 )
 
 func TestGetUpdatePriority(t *testing.T) {
 	containerName := "test-container"
 	testCases := []struct {
 		name         string
-		pod          *corev1.Pod
+		pod          *core.Pod
 		vpa          *vpa_types.VerticalAutoscaler
 		expectedPrio PodPriority
 	}{
@@ -239,7 +239,7 @@ func TestGetUpdatePriority_VpaObservedContainers(t *testing.T) {
 	testVpa := test.VerticalAutoscaler().WithName("test-vpa").WithContainer(containerName).Get()
 	tests := []struct {
 		name           string
-		pod            *corev1.Pod
+		pod            *core.Pod
 		recommendation *vpa_types.RecommendedPodResources
 		want           float64
 	}{

@@ -30,6 +30,7 @@ import (
 	"kubedb.dev/autoscaler/pkg/recommender/model"
 	metrics_recommender "kubedb.dev/autoscaler/pkg/utils/metrics/recommender"
 	vpa_utils "kubedb.dev/autoscaler/pkg/utils/vpa"
+
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 )

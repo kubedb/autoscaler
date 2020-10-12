@@ -20,15 +20,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
+	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 const (
-	cpu    = apiv1.ResourceCPU
-	memory = apiv1.ResourceMemory
+	cpu    = core.ResourceCPU
+	memory = core.ResourceMemory
 )
 
 func TestValidateVPA(t *testing.T) {
@@ -109,10 +110,10 @@ func TestValidateVPA(t *testing.T) {
 						ContainerPolicies: []vpa_types.ContainerResourcePolicy{
 							{
 								ContainerName: "loot box",
-								MinAllowed: apiv1.ResourceList{
+								MinAllowed: core.ResourceList{
 									cpu: resource.MustParse("100"),
 								},
-								MaxAllowed: apiv1.ResourceList{
+								MaxAllowed: core.ResourceList{
 									cpu: resource.MustParse("10"),
 								},
 							},
@@ -148,10 +149,10 @@ func TestValidateVPA(t *testing.T) {
 							{
 								ContainerName: "loot box",
 								Mode:          &validScalingMode,
-								MinAllowed: apiv1.ResourceList{
+								MinAllowed: core.ResourceList{
 									cpu: resource.MustParse("10"),
 								},
-								MaxAllowed: apiv1.ResourceList{
+								MaxAllowed: core.ResourceList{
 									cpu: resource.MustParse("100"),
 								},
 							},

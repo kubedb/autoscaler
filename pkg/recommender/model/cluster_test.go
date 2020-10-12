@@ -21,12 +21,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	labels "k8s.io/apimachinery/pkg/labels"
 	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 	"kubedb.dev/autoscaler/pkg/utils/test"
+
+	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	labels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog"
 )
 
@@ -54,7 +55,7 @@ func makeTestUsageSample() *ContainerUsageSampleWithKey {
 func TestClusterAddSample(t *testing.T) {
 	// Create a pod with a single container.
 	cluster := NewClusterState()
-	cluster.AddOrUpdatePod(testPodID, testLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID, testLabels, core.PodRunning)
 	assert.NoError(t, cluster.AddOrUpdateContainer(testContainerID, testRequest))
 
 	// Add a usage sample to the container.
@@ -137,7 +138,7 @@ func TestClusterGCAggregateContainerStateDeletesEmptyInactive(t *testing.T) {
 	assert.NotEmpty(t, cluster.aggregateStateMap)
 	assert.NotEmpty(t, vpa.aggregateContainerStates)
 
-	cluster.Pods[pod.ID].Phase = apiv1.PodSucceeded
+	cluster.Pods[pod.ID].Phase = core.PodSucceeded
 	cluster.GarbageCollectAggregateCollectionStates(testTimestamp)
 
 	// AggegateContainerState should be empty as the pod is no longer active and
@@ -211,7 +212,7 @@ func TestAddSampleAfterAggregateContainerStateGCed(t *testing.T) {
 func TestClusterRecordOOM(t *testing.T) {
 	// Create a pod with a single container.
 	cluster := NewClusterState()
-	cluster.AddOrUpdatePod(testPodID, testLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID, testLabels, core.PodRunning)
 	assert.NoError(t, cluster.AddOrUpdateContainer(testContainerID, testRequest))
 
 	// RecordOOM
@@ -257,7 +258,7 @@ func addTestVpa(cluster *ClusterState) *Vpa {
 }
 
 func addTestPod(cluster *ClusterState) *PodState {
-	cluster.AddOrUpdatePod(testPodID, testLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID, testLabels, core.PodRunning)
 	return cluster.Pods[testPodID]
 }
 
@@ -300,7 +301,7 @@ func TestChangePodLabels(t *testing.T) {
 	aggregateStateKey := cluster.aggregateStateKeyForContainerID(testContainerID)
 	assert.Contains(t, vpa.aggregateContainerStates, aggregateStateKey)
 	// Update Pod labels to no longer match the VPA.
-	cluster.AddOrUpdatePod(testPodID, emptyLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID, emptyLabels, core.PodRunning)
 	aggregateStateKey = cluster.aggregateStateKeyForContainerID(testContainerID)
 	assert.NotContains(t, vpa.aggregateContainerStates, aggregateStateKey)
 }
@@ -503,8 +504,8 @@ func TestTwoPodsWithSameLabels(t *testing.T) {
 	containerID2 := ContainerID{podID2, "foo-container"}
 
 	cluster := NewClusterState()
-	cluster.AddOrUpdatePod(podID1, testLabels, apiv1.PodRunning)
-	cluster.AddOrUpdatePod(podID2, testLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(podID1, testLabels, core.PodRunning)
+	cluster.AddOrUpdatePod(podID2, testLabels, core.PodRunning)
 	cluster.AddOrUpdateContainer(containerID1, testRequest)
 	cluster.AddOrUpdateContainer(containerID2, testRequest)
 
@@ -520,8 +521,8 @@ func TestTwoPodsWithDifferentNamespaces(t *testing.T) {
 	containerID2 := ContainerID{podID2, "foo-container"}
 
 	cluster := NewClusterState()
-	cluster.AddOrUpdatePod(podID1, testLabels, apiv1.PodRunning)
-	cluster.AddOrUpdatePod(podID2, testLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(podID1, testLabels, core.PodRunning)
+	cluster.AddOrUpdatePod(podID2, testLabels, core.PodRunning)
 	cluster.AddOrUpdateContainer(containerID1, testRequest)
 	cluster.AddOrUpdateContainer(containerID2, testRequest)
 
@@ -538,13 +539,13 @@ func TestEmptySelector(t *testing.T) {
 	// Create a VPA with an empty selector (matching all pods).
 	vpa := addVpa(cluster, testVpaID, testAnnotations, "")
 	// Create a pod with labels. Add a container.
-	cluster.AddOrUpdatePod(testPodID, testLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID, testLabels, core.PodRunning)
 	containerID1 := ContainerID{testPodID, "foo"}
 	assert.NoError(t, cluster.AddOrUpdateContainer(containerID1, testRequest))
 
 	// Create a pod without labels. Add a container.
 	anotherPodID := PodID{"namespace-1", "pod-2"}
-	cluster.AddOrUpdatePod(anotherPodID, emptyLabels, apiv1.PodRunning)
+	cluster.AddOrUpdatePod(anotherPodID, emptyLabels, core.PodRunning)
 	containerID2 := ContainerID{anotherPodID, "foo"}
 	assert.NoError(t, cluster.AddOrUpdateContainer(containerID2, testRequest))
 
@@ -630,7 +631,7 @@ func TestRecordRecommendation(t *testing.T) {
 type podDesc struct {
 	id     PodID
 	labels labels.Set
-	phase  apiv1.PodPhase
+	phase  core.PodPhase
 }
 
 func TestGetActiveMatchingPods(t *testing.T) {
@@ -652,7 +653,7 @@ func TestGetActiveMatchingPods(t *testing.T) {
 				{
 					id:     testPodID,
 					labels: testLabels,
-					phase:  apiv1.PodRunning,
+					phase:  core.PodRunning,
 				},
 			},
 			expectedPods: []PodID{testPodID},
@@ -663,7 +664,7 @@ func TestGetActiveMatchingPods(t *testing.T) {
 				{
 					id:     testPodID,
 					labels: testLabels,
-					phase:  apiv1.PodFailed,
+					phase:  core.PodFailed,
 				},
 			},
 			expectedPods: []PodID{testPodID},
@@ -674,11 +675,11 @@ func TestGetActiveMatchingPods(t *testing.T) {
 				{
 					id:     testPodID,
 					labels: emptyLabels,
-					phase:  apiv1.PodRunning,
+					phase:  core.PodRunning,
 				}, {
 					id:     PodID{Namespace: "different-than-vpa", PodName: "pod-1"},
 					labels: testLabels,
-					phase:  apiv1.PodRunning,
+					phase:  core.PodRunning,
 				},
 			},
 			expectedPods: []PodID{},
@@ -718,7 +719,7 @@ func TestVPAWithMatchingPods(t *testing.T) {
 				{
 					testPodID,
 					testLabels,
-					apiv1.PodRunning,
+					core.PodRunning,
 				},
 			},
 			expectedMatch: 1,
@@ -730,7 +731,7 @@ func TestVPAWithMatchingPods(t *testing.T) {
 				{
 					testPodID,
 					emptyLabels,
-					apiv1.PodRunning,
+					core.PodRunning,
 				},
 			},
 			expectedMatch: 0,
@@ -742,17 +743,17 @@ func TestVPAWithMatchingPods(t *testing.T) {
 				{
 					testPodID,
 					emptyLabels, // does not match VPA
-					apiv1.PodRunning,
+					core.PodRunning,
 				},
 				{
 					testPodID3,
 					testLabels,
-					apiv1.PodRunning,
+					core.PodRunning,
 				},
 				{
 					testPodID4,
 					testLabels,
-					apiv1.PodRunning,
+					core.PodRunning,
 				},
 			},
 			expectedMatch: 2,

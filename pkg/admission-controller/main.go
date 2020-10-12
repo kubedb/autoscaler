@@ -130,7 +130,7 @@ one and use current recommendation to set resource requests in the pod.`,
 			clientset := getClient()
 			server := &http.Server{
 				Addr:      fmt.Sprintf(":%d", port),
-				TLSConfig: configTLS(clientset, certs.serverCert, certs.serverKey),
+				TLSConfig: configTLS(certs.serverCert, certs.serverKey),
 			}
 			url := fmt.Sprintf("%v:%v", webhookAddress, webhookPort)
 			go func() {
@@ -140,7 +140,10 @@ one and use current recommendation to set resource requests in the pod.`,
 				// Start status updates after the webhook is initialized.
 				statusUpdater.Run(stopCh)
 			}()
-			server.ListenAndServeTLS("", "")
+			err = server.ListenAndServeTLS("", "")
+			if err != nil {
+				klog.Fatal(err)
+			}
 		},
 	}
 	cmd.Flags().StringVar(&certsConfiguration.clientCaFile, "client-ca-file", "/etc/tls-certs/caCert.pem", "Path to CA PEM file.")

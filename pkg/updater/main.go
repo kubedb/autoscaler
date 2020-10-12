@@ -107,9 +107,11 @@ func NewCmdUpdater() *cobra.Command {
 			}
 			ticker := time.Tick(updaterInterval)
 			for range ticker {
-				ctx, cancel := context.WithTimeout(context.Background(), updaterInterval)
-				defer cancel()
-				updater.RunOnce(ctx)
+				func() {
+					ctx, cancel := context.WithTimeout(context.Background(), updaterInterval)
+					defer cancel()
+					updater.RunOnce(ctx)
+				}()
 				healthCheck.UpdateLastActivity()
 			}
 		},

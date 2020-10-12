@@ -88,7 +88,7 @@ func NewUpdater(
 	}
 	return &updater{
 		vpaLister:                    vpa_api_util.NewVpasLister(vpaClient, make(chan struct{}), namespace),
-		podLister:                    newPodLister(kubeClient, namespace),
+		podLister:                    newPodLister(kubeClient),
 		eventRecorder:                newEventRecorder(kubeClient),
 		evictionFactory:              factory,
 		recommendationProcessor:      recommendationProcessor,
@@ -280,7 +280,7 @@ func filterDeletedPods(pods []*core.Pod) []*core.Pod {
 	return result
 }
 
-func newPodLister(kubeClient kube_client.Interface, namespace string) v1lister.PodLister {
+func newPodLister(kubeClient kube_client.Interface) v1lister.PodLister {
 	selector := fields.ParseSelectorOrDie("spec.nodeName!=" + "" + ",status.phase!=" +
 		string(core.PodSucceeded) + ",status.phase!=" + string(core.PodFailed))
 	podListWatch := cache.NewListWatchFromClient(kubeClient.CoreV1().RESTClient(), "pods", core.NamespaceAll, selector)

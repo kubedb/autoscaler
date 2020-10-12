@@ -187,11 +187,7 @@ func (f *podsEvictionRestrictionFactoryImpl) NewPodsEvictionRestriction(pods []*
 	livePods := make(map[podReplicaCreator][]*core.Pod)
 
 	for _, pod := range pods {
-		creator, err := getPodReplicaCreator(pod)
-		if err != nil {
-			klog.Errorf("failed to obtain replication info for pod %s: %v", pod.Name, err)
-			continue
-		}
+		creator := getPodReplicaCreator(pod)
 		if creator == nil {
 			klog.Warningf("pod %s not replicated", pod.Name)
 			continue
@@ -242,17 +238,16 @@ func (f *podsEvictionRestrictionFactoryImpl) NewPodsEvictionRestriction(pods []*
 		creatorToSingleGroupStatsMap: creatorToSingleGroupStatsMap}
 }
 
-func getPodReplicaCreator(pod *core.Pod) (*podReplicaCreator, error) {
+func getPodReplicaCreator(pod *core.Pod) *podReplicaCreator {
 	creator := managingControllerRef(pod)
 	if creator == nil {
-		return nil, nil
+		return nil
 	}
-	podReplicaCreator := &podReplicaCreator{
+	return &podReplicaCreator{
 		Namespace: pod.Namespace,
 		Name:      creator.Name,
 		Kind:      controllerKind(creator.Kind),
 	}
-	return podReplicaCreator, nil
 }
 
 func getPodID(pod *core.Pod) string {

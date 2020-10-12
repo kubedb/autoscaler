@@ -79,7 +79,11 @@ func TestConfidenceMultiplier(t *testing.T) {
 	timestamp := anyTime
 	for i := 1; i <= 9; i++ {
 		s.AddSample(&model.ContainerUsageSample{
-			timestamp, model.CPUAmountFromCores(1.0), testRequest[model.ResourceCPU], model.ResourceCPU})
+			MeasureStart: timestamp,
+			Usage:        model.CPUAmountFromCores(1.0),
+			Request:      testRequest[model.ResourceCPU],
+			Resource:     model.ResourceCPU,
+		})
 		timestamp = timestamp.Add(time.Minute * 2)
 	}
 

@@ -140,10 +140,12 @@ func (o *observer) OnUpdate(oldObj, newObj interface{}) {
 	oldPod, ok := oldObj.(*core.Pod)
 	if oldPod == nil || !ok {
 		klog.Errorf("OOM observer received invalid oldObj: %v", oldObj)
+		return
 	}
 	newPod, ok := newObj.(*core.Pod)
 	if newPod == nil || !ok {
 		klog.Errorf("OOM observer received invalid newObj: %v", newObj)
+		return
 	}
 
 	for _, containerStatus := range newPod.Status.ContainerStatuses {

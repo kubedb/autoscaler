@@ -184,9 +184,7 @@ func (b *verticalPodAutoscalerBuilder) Get() *vpa_types.VerticalAutoscaler {
 	}}}
 
 	recommendation := b.recommendation.WithContainer(b.containerName).Get()
-	for _, rec := range b.appendedRecommendations {
-		recommendation.ContainerRecommendations = append(recommendation.ContainerRecommendations, rec)
-	}
+	recommendation.ContainerRecommendations = append(recommendation.ContainerRecommendations, b.appendedRecommendations...)
 
 	return &vpa_types.VerticalAutoscaler{
 		ObjectMeta: metav1.ObjectMeta{

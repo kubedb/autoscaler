@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var (
@@ -165,7 +166,7 @@ func TestDecayingHistogramLoadFromCheckpoint(t *testing.T) {
 		halfLife:           time.Hour,
 		referenceTimestamp: time.Time{},
 	}
-	d.LoadFromCheckpoint(&checkpoint)
+	utilruntime.Must(d.LoadFromCheckpoint(&checkpoint))
 
 	assert.False(t, d.histogram.IsEmpty())
 	assert.Equal(t, timestamp, d.referenceTimestamp)

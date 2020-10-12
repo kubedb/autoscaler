@@ -28,6 +28,7 @@ import (
 	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/klog"
 )
 
@@ -262,9 +263,9 @@ func addTestPod(cluster *ClusterState) *PodState {
 	return cluster.Pods[testPodID]
 }
 
-func addTestContainer(cluster *ClusterState) *ContainerState {
-	cluster.AddOrUpdateContainer(testContainerID, testRequest)
-	return cluster.GetContainer(testContainerID)
+func addTestContainer(cluster *ClusterState) {
+	utilruntime.Must(cluster.AddOrUpdateContainer(testContainerID, testRequest))
+	cluster.GetContainer(testContainerID)
 }
 
 // Creates a VPA followed by a matching pod. Verifies that the links between
@@ -328,7 +329,8 @@ func TestUpdateAnnotations(t *testing.T) {
 // between the pod and the VPA are updated correctly each time.
 func TestUpdatePodSelector(t *testing.T) {
 	cluster := NewClusterState()
-	vpa := addTestVpa(cluster)
+	var vpa *Vpa
+	addTestVpa(cluster)
 	addTestPod(cluster)
 	addTestContainer(cluster)
 
@@ -506,8 +508,8 @@ func TestTwoPodsWithSameLabels(t *testing.T) {
 	cluster := NewClusterState()
 	cluster.AddOrUpdatePod(podID1, testLabels, core.PodRunning)
 	cluster.AddOrUpdatePod(podID2, testLabels, core.PodRunning)
-	cluster.AddOrUpdateContainer(containerID1, testRequest)
-	cluster.AddOrUpdateContainer(containerID2, testRequest)
+	assert.NoError(t, cluster.AddOrUpdateContainer(containerID1, testRequest))
+	assert.NoError(t, cluster.AddOrUpdateContainer(containerID2, testRequest))
 
 	// Expect only one aggregation to be created.
 	assert.Equal(t, 1, len(cluster.aggregateStateMap))
@@ -523,8 +525,8 @@ func TestTwoPodsWithDifferentNamespaces(t *testing.T) {
 	cluster := NewClusterState()
 	cluster.AddOrUpdatePod(podID1, testLabels, core.PodRunning)
 	cluster.AddOrUpdatePod(podID2, testLabels, core.PodRunning)
-	cluster.AddOrUpdateContainer(containerID1, testRequest)
-	cluster.AddOrUpdateContainer(containerID2, testRequest)
+	assert.NoError(t, cluster.AddOrUpdateContainer(containerID1, testRequest))
+	assert.NoError(t, cluster.AddOrUpdateContainer(containerID2, testRequest))
 
 	// Expect two separate aggregations to be created.
 	assert.Equal(t, 2, len(cluster.aggregateStateMap))

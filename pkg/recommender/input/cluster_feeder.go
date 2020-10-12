@@ -39,6 +39,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/informers"
 	kube_client "k8s.io/client-go/kubernetes"
@@ -341,7 +342,7 @@ func (feeder *clusterStateFeeder) LoadVPAs() {
 	for vpaID := range feeder.clusterState.Vpas {
 		if _, exists := vpaKeys[vpaID]; !exists {
 			klog.V(3).Infof("Deleting VPA %v", vpaID)
-			feeder.clusterState.DeleteVpa(vpaID)
+			utilruntime.Must(feeder.clusterState.DeleteVpa(vpaID))
 		}
 	}
 	feeder.clusterState.ObservedVpas = vpaCRDs

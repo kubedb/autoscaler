@@ -26,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	v1lister "k8s.io/client-go/listers/core/v1"
 )
 
@@ -33,7 +34,7 @@ var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 func init() {
-	core.AddToScheme(scheme)
+	utilruntime.Must(core.AddToScheme(scheme))
 }
 
 const pod1Yaml = `

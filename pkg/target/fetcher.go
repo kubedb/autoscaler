@@ -154,48 +154,20 @@ func getLabelSelector(informer cache.SharedIndexInformer, kind, namespace, name 
 	if !exists {
 		return nil, fmt.Errorf("%s %s/%s does not exist", kind, namespace, name)
 	}
-	switch obj.(type) {
-	case (*apps.DaemonSet):
-		apiObj, ok := obj.(*apps.DaemonSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	switch apiObj := obj.(type) {
+	case *apps.DaemonSet:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*apps.Deployment):
-		apiObj, ok := obj.(*apps.Deployment)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.Deployment:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*apps.StatefulSet):
-		apiObj, ok := obj.(*apps.StatefulSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.StatefulSet:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*apps.ReplicaSet):
-		apiObj, ok := obj.(*apps.ReplicaSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.ReplicaSet:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*batchv1.Job):
-		apiObj, ok := obj.(*batchv1.Job)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *batchv1.Job:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*batchv1beta1.CronJob):
-		apiObj, ok := obj.(*batchv1beta1.CronJob)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *batchv1beta1.CronJob:
 		return metav1.LabelSelectorAsSelector(metav1.SetAsLabelSelector(apiObj.Spec.JobTemplate.Spec.Template.Labels))
-	case (*core.ReplicationController):
-		apiObj, ok := obj.(*core.ReplicationController)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *core.ReplicationController:
 		return metav1.LabelSelectorAsSelector(metav1.SetAsLabelSelector(apiObj.Spec.Selector))
 	}
 	return nil, fmt.Errorf("Don't know how to read label seletor")

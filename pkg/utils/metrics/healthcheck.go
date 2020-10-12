@@ -60,10 +60,10 @@ func (hc *HealthCheck) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	timedOut, ago := hc.checkLastActivity()
 	if timedOut {
 		w.WriteHeader(500)
-		w.Write([]byte(fmt.Sprintf("Error: last activity more than %v ago", ago)))
+		must(w.Write([]byte(fmt.Sprintf("Error: last activity more than %v ago", ago))))
 	} else {
 		w.WriteHeader(200)
-		w.Write([]byte("OK"))
+		must(w.Write([]byte("OK")))
 	}
 }
 
@@ -73,4 +73,10 @@ func (hc *HealthCheck) UpdateLastActivity() {
 	defer hc.mutex.Unlock()
 
 	hc.lastActivity = time.Now()
+}
+
+func must(_ int, err error) {
+	if err != nil {
+		panic(err)
+	}
 }

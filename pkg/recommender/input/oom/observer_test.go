@@ -27,13 +27,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 func init() {
-	core.AddToScheme(scheme)
+	utilruntime.Must(core.AddToScheme(scheme))
 }
 
 const pod1Yaml = `
@@ -129,7 +130,7 @@ func TestMalformedPodReceived(t *testing.T) {
 }
 
 func TestParseEvictionEvent(t *testing.T) {
-	parseTimestamp := func(str string) time.Time {
+	parseTimestamp := func(_ string) time.Time {
 		timestamp, err := time.Parse(time.RFC3339, "2018-02-23T13:38:48Z")
 		assert.NoError(t, err)
 		return timestamp.UTC()

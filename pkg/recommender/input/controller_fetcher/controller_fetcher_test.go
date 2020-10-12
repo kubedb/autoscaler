@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/restmapper"
 	scalefake "k8s.io/client-go/scale/fake"
 	k8stesting "k8s.io/client-go/testing"
@@ -100,14 +101,13 @@ func addController(controller *controllerFetcher, obj runtime.Object) {
 	kind := wellKnownController(obj.GetObjectKind().GroupVersionKind().Kind)
 	_, ok := controller.informersMap[kind]
 	if ok {
-		controller.informersMap[kind].GetStore().Add(obj)
+		utilruntime.Must(controller.informersMap[kind].GetStore().Add(obj))
 	}
 }
 
 func TestControllerFetcher(t *testing.T) {
 	type testCase struct {
 		name          string
-		apiVersion    string
 		key           *ControllerKeyWithAPIGroup
 		objects       []runtime.Object
 		expectedKey   *ControllerKeyWithAPIGroup

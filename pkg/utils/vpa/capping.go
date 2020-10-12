@@ -285,8 +285,8 @@ func applyContainerLimitRange(recommendation core.ResourceList, container core.C
 	if limitRange == nil {
 		return annotations
 	}
-	maxAllowedRecommendation := getMaxAllowedRecommendation(recommendation, container, limitRange)
-	minAllowedRecommendation := getMinAllowedRecommendation(recommendation, container, limitRange)
+	maxAllowedRecommendation := getMaxAllowedRecommendation(container, limitRange)
+	minAllowedRecommendation := getMinAllowedRecommendation(container, limitRange)
 	for resourceName, recommended := range recommendation {
 		cappedToMin, isCapped := maybeCapToMin(recommended, resourceName, minAllowedRecommendation)
 		recommendation[resourceName] = cappedToMin
@@ -302,22 +302,20 @@ func applyContainerLimitRange(recommendation core.ResourceList, container core.C
 	return annotations
 }
 
-func getMaxAllowedRecommendation(recommendation core.ResourceList, container core.Container,
-	podLimitRange *core.LimitRangeItem) core.ResourceList {
+func getMaxAllowedRecommendation(container core.Container, podLimitRange *core.LimitRangeItem) core.ResourceList {
 	if podLimitRange == nil {
 		return core.ResourceList{}
 	}
-	return getBoundaryRecommendation(recommendation, container, podLimitRange.Max, podLimitRange.Default)
+	return getBoundaryRecommendation(container, podLimitRange.Max, podLimitRange.Default)
 }
 
-func getMinAllowedRecommendation(recommendation core.ResourceList, container core.Container,
-	podLimitRange *core.LimitRangeItem) core.ResourceList {
+func getMinAllowedRecommendation(container core.Container, podLimitRange *core.LimitRangeItem) core.ResourceList {
 	// Both limit and request must be higher than min set in the limit range:
 	// https://github.com/kubernetes/kubernetes/blob/016e9d5c06089774c6286fd825302cbae661a446/plugin/pkg/admission/limitranger/admission.go#L303
 	if podLimitRange == nil {
 		return core.ResourceList{}
 	}
-	minForLimit := getBoundaryRecommendation(recommendation, container, podLimitRange.Min, podLimitRange.Default)
+	minForLimit := getBoundaryRecommendation(container, podLimitRange.Min, podLimitRange.Default)
 	minForRequest := podLimitRange.Min
 	if minForRequest == nil {
 		return minForLimit
@@ -332,8 +330,7 @@ func getMinAllowedRecommendation(recommendation core.ResourceList, container cor
 	return result
 }
 
-func getBoundaryRecommendation(recommendation core.ResourceList, container core.Container,
-	boundaryLimit, defaultLimit core.ResourceList) core.ResourceList {
+func getBoundaryRecommendation(container core.Container, boundaryLimit, defaultLimit core.ResourceList) core.ResourceList {
 	if boundaryLimit == nil {
 		return core.ResourceList{}
 	}

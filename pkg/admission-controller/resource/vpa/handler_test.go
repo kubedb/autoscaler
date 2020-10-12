@@ -28,8 +28,7 @@ import (
 )
 
 const (
-	cpu    = core.ResourceCPU
-	memory = core.ResourceMemory
+	cpu = core.ResourceCPU
 )
 
 func TestValidateVPA(t *testing.T) {

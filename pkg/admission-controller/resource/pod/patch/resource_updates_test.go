@@ -50,41 +50,41 @@ func (frp *fakeRecommendationProvider) GetContainersResourcesForPod(pod *core.Po
 
 func addResourcesPatch(idx int) resource_admission.PatchRecord {
 	return resource_admission.PatchRecord{
-		"add",
-		fmt.Sprintf("/spec/containers/%d/resources", idx),
-		core.ResourceRequirements{},
+		Op:    "add",
+		Path:  fmt.Sprintf("/spec/containers/%d/resources", idx),
+		Value: core.ResourceRequirements{},
 	}
 }
 
 func addRequestsPatch(idx int) resource_admission.PatchRecord {
 	return resource_admission.PatchRecord{
-		"add",
-		fmt.Sprintf("/spec/containers/%d/resources/requests", idx),
-		core.ResourceList{},
+		Op:    "add",
+		Path:  fmt.Sprintf("/spec/containers/%d/resources/requests", idx),
+		Value: core.ResourceList{},
 	}
 }
 
 func addLimitsPatch(idx int) resource_admission.PatchRecord {
 	return resource_admission.PatchRecord{
-		"add",
-		fmt.Sprintf("/spec/containers/%d/resources/limits", idx),
-		core.ResourceList{},
+		Op:    "add",
+		Path:  fmt.Sprintf("/spec/containers/%d/resources/limits", idx),
+		Value: core.ResourceList{},
 	}
 }
 
 func addResourceRequestPatch(index int, res, amount string) resource_admission.PatchRecord {
 	return resource_admission.PatchRecord{
-		"add",
-		fmt.Sprintf("/spec/containers/%d/resources/requests/%s", index, res),
-		resource.MustParse(amount),
+		Op:    "add",
+		Path:  fmt.Sprintf("/spec/containers/%d/resources/requests/%s", index, res),
+		Value: resource.MustParse(amount),
 	}
 }
 
 func addResourceLimitPatch(index int, res, amount string) resource_admission.PatchRecord {
 	return resource_admission.PatchRecord{
-		"add",
-		fmt.Sprintf("/spec/containers/%d/resources/limits/%s", index, res),
-		resource.MustParse(amount),
+		Op:    "add",
+		Path:  fmt.Sprintf("/spec/containers/%d/resources/limits/%s", index, res),
+		Value: resource.MustParse(amount),
 	}
 }
 
@@ -92,8 +92,8 @@ func addAnnotationRequest(updateResources [][]string, kind string) resource_admi
 	requests := make([]string, 0)
 	for idx, podResources := range updateResources {
 		podRequests := make([]string, 0)
-		for _, resource := range podResources {
-			podRequests = append(podRequests, resource+" "+kind)
+		for _, r := range podResources {
+			podRequests = append(podRequests, r+" "+kind)
 		}
 		requests = append(requests, fmt.Sprintf("container %d: %s", idx, strings.Join(podRequests, ", ")))
 	}

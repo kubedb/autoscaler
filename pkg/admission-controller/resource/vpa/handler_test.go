@@ -20,15 +20,15 @@ import (
 	"fmt"
 	"testing"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
 	"github.com/stretchr/testify/assert"
-	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
 
 const (
-	cpu    = apiv1.ResourceCPU
-	memory = apiv1.ResourceMemory
+	cpu = core.ResourceCPU
 )
 
 func TestValidateVPA(t *testing.T) {
@@ -40,24 +40,24 @@ func TestValidateVPA(t *testing.T) {
 	controlledValuesRequestsAndLimits := vpa_types.ContainerControlledValuesRequestsAndLimits
 	tests := []struct {
 		name        string
-		vpa         vpa_types.VerticalPodAutoscaler
+		vpa         vpa_types.VerticalAutoscaler
 		isCreate    bool
 		expectError error
 	}{
 		{
 			name: "empty update",
-			vpa:  vpa_types.VerticalPodAutoscaler{},
+			vpa:  vpa_types.VerticalAutoscaler{},
 		},
 		{
 			name:        "empty create",
-			vpa:         vpa_types.VerticalPodAutoscaler{},
+			vpa:         vpa_types.VerticalAutoscaler{},
 			isCreate:    true,
 			expectError: fmt.Errorf("TargetRef is required. If you're using v1beta1 version of the API, please migrate to v1"),
 		},
 		{
 			name: "no update mode",
-			vpa: vpa_types.VerticalPodAutoscaler{
-				Spec: vpa_types.VerticalPodAutoscalerSpec{
+			vpa: vpa_types.VerticalAutoscaler{
+				Spec: vpa_types.VerticalAutoscalerSpec{
 					UpdatePolicy: &vpa_types.PodUpdatePolicy{},
 				},
 			},
@@ -65,8 +65,8 @@ func TestValidateVPA(t *testing.T) {
 		},
 		{
 			name: "bad update mode",
-			vpa: vpa_types.VerticalPodAutoscaler{
-				Spec: vpa_types.VerticalPodAutoscalerSpec{
+			vpa: vpa_types.VerticalAutoscaler{
+				Spec: vpa_types.VerticalAutoscalerSpec{
 					UpdatePolicy: &vpa_types.PodUpdatePolicy{
 						UpdateMode: &badUpdateMode,
 					},
@@ -76,8 +76,8 @@ func TestValidateVPA(t *testing.T) {
 		},
 		{
 			name: "no policy name",
-			vpa: vpa_types.VerticalPodAutoscaler{
-				Spec: vpa_types.VerticalPodAutoscalerSpec{
+			vpa: vpa_types.VerticalAutoscaler{
+				Spec: vpa_types.VerticalAutoscalerSpec{
 					ResourcePolicy: &vpa_types.PodResourcePolicy{
 						ContainerPolicies: []vpa_types.ContainerResourcePolicy{{}},
 					},
@@ -87,8 +87,8 @@ func TestValidateVPA(t *testing.T) {
 		},
 		{
 			name: "invalid scaling mode",
-			vpa: vpa_types.VerticalPodAutoscaler{
-				Spec: vpa_types.VerticalPodAutoscalerSpec{
+			vpa: vpa_types.VerticalAutoscaler{
+				Spec: vpa_types.VerticalAutoscalerSpec{
 					ResourcePolicy: &vpa_types.PodResourcePolicy{
 						ContainerPolicies: []vpa_types.ContainerResourcePolicy{
 							{
@@ -103,16 +103,16 @@ func TestValidateVPA(t *testing.T) {
 		},
 		{
 			name: "bad limits",
-			vpa: vpa_types.VerticalPodAutoscaler{
-				Spec: vpa_types.VerticalPodAutoscalerSpec{
+			vpa: vpa_types.VerticalAutoscaler{
+				Spec: vpa_types.VerticalAutoscalerSpec{
 					ResourcePolicy: &vpa_types.PodResourcePolicy{
 						ContainerPolicies: []vpa_types.ContainerResourcePolicy{
 							{
 								ContainerName: "loot box",
-								MinAllowed: apiv1.ResourceList{
+								MinAllowed: core.ResourceList{
 									cpu: resource.MustParse("100"),
 								},
-								MaxAllowed: apiv1.ResourceList{
+								MaxAllowed: core.ResourceList{
 									cpu: resource.MustParse("10"),
 								},
 							},
@@ -124,8 +124,8 @@ func TestValidateVPA(t *testing.T) {
 		},
 		{
 			name: "scaling off with controlled values requests and limits",
-			vpa: vpa_types.VerticalPodAutoscaler{
-				Spec: vpa_types.VerticalPodAutoscalerSpec{
+			vpa: vpa_types.VerticalAutoscaler{
+				Spec: vpa_types.VerticalAutoscalerSpec{
 					ResourcePolicy: &vpa_types.PodResourcePolicy{
 						ContainerPolicies: []vpa_types.ContainerResourcePolicy{
 							{
@@ -141,17 +141,17 @@ func TestValidateVPA(t *testing.T) {
 		},
 		{
 			name: "all valid",
-			vpa: vpa_types.VerticalPodAutoscaler{
-				Spec: vpa_types.VerticalPodAutoscalerSpec{
+			vpa: vpa_types.VerticalAutoscaler{
+				Spec: vpa_types.VerticalAutoscalerSpec{
 					ResourcePolicy: &vpa_types.PodResourcePolicy{
 						ContainerPolicies: []vpa_types.ContainerResourcePolicy{
 							{
 								ContainerName: "loot box",
 								Mode:          &validScalingMode,
-								MinAllowed: apiv1.ResourceList{
+								MinAllowed: core.ResourceList{
 									cpu: resource.MustParse("10"),
 								},
-								MaxAllowed: apiv1.ResourceList{
+								MaxAllowed: core.ResourceList{
 									cpu: resource.MustParse("100"),
 								},
 							},

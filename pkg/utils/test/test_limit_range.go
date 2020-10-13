@@ -18,7 +18,7 @@ package test
 
 import (
 	core "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // LimitRange returns an object that helps build a LimitRangeItem object for tests.
@@ -73,7 +73,7 @@ func (lrb *limitRangeBuilder) WithMin(min core.ResourceList) *limitRangeBuilder 
 
 func (lrb *limitRangeBuilder) Get() *core.LimitRange {
 	result := core.LimitRange{
-		ObjectMeta: meta.ObjectMeta{
+		ObjectMeta: metav1.ObjectMeta{
 			Namespace: lrb.namespace,
 			Name:      lrb.name,
 		},

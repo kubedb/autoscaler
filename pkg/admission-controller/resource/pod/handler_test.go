@@ -20,30 +20,31 @@ import (
 	"fmt"
 	"testing"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
+	"kubedb.dev/autoscaler/pkg/admission-controller/resource/pod/patch"
+	"kubedb.dev/autoscaler/pkg/utils/test"
+
 	"github.com/stretchr/testify/assert"
 	"k8s.io/api/admission/v1beta1"
-	apiv1 "k8s.io/api/core/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	resource_admission "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/patch"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
 )
 
 type fakePodPreProcessor struct {
 	err error
 }
 
-func (fpp *fakePodPreProcessor) Process(pod apiv1.Pod) (apiv1.Pod, error) {
+func (fpp *fakePodPreProcessor) Process(pod core.Pod) (core.Pod, error) {
 	return pod, fpp.err
 }
 
 type fakeVpaMatcher struct {
-	vpa *vpa_types.VerticalPodAutoscaler
+	vpa *vpa_types.VerticalAutoscaler
 }
 
-func (m *fakeVpaMatcher) GetMatchingVPA(_ *apiv1.Pod) *vpa_types.VerticalPodAutoscaler {
+func (m *fakeVpaMatcher) GetMatchingVPA(_ *core.Pod) *vpa_types.VerticalAutoscaler {
 	return m.vpa
 }
 
@@ -52,13 +53,13 @@ type fakePatchCalculator struct {
 	err     error
 }
 
-func (c *fakePatchCalculator) CalculatePatches(_ *apiv1.Pod, _ *vpa_types.VerticalPodAutoscaler) (
+func (c *fakePatchCalculator) CalculatePatches(_ *core.Pod, _ *vpa_types.VerticalAutoscaler) (
 	[]resource_admission.PatchRecord, error) {
 	return c.patches, c.err
 }
 
 func TestGetPatches(t *testing.T) {
-	testVpa := test.VerticalPodAutoscaler().WithName("name").WithContainer("testy-container").Get()
+	testVpa := test.VerticalAutoscaler().WithName("name").WithContainer("testy-container").Get()
 	testPatchRecord := resource_admission.PatchRecord{
 		Op:    "add",
 		Path:  "some/path",
@@ -73,7 +74,7 @@ func TestGetPatches(t *testing.T) {
 		name                 string
 		podJson              []byte
 		namespace            string
-		vpa                  *vpa_types.VerticalPodAutoscaler
+		vpa                  *vpa_types.VerticalAutoscaler
 		podPreProcessorError error
 		calculators          []patch.Calculator
 		expectPatches        []resource_admission.PatchRecord
@@ -177,7 +178,7 @@ func TestGetPatches(t *testing.T) {
 			fvm := &fakeVpaMatcher{vpa: tc.vpa}
 			h := NewResourceHandler(fppp, fvm, tc.calculators)
 			patches, err := h.GetPatches(&v1beta1.AdmissionRequest{
-				Resource: v1.GroupVersionResource{
+				Resource: metav1.GroupVersionResource{
 					Version: "v1",
 				},
 				Namespace: tc.namespace,

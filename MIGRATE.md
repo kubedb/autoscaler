@@ -20,7 +20,7 @@ Let's see an example ilustrating the change:
 
 ```yaml
 apiVersion: "autoscaling.k8s.io/v1beta1"
-kind: VerticalPodAutoscaler
+kind: VerticalAutoscaler
 metadata:
   name: hamster-vpa-deprecated
 spec:
@@ -35,7 +35,7 @@ example below.
 
 ```yaml
 apiVersion: "autoscaling.k8s.io/v1beta2"
-kind: VerticalPodAutoscaler
+kind: VerticalAutoscaler
 metadata:
   name: hamster-vpa
 spec:
@@ -48,10 +48,10 @@ spec:
 The target object can be a well known controller (Deployment, ReplicaSet, DaemonSet, StatefulSet etc.)
 or any object that implements the scale subresource. VPA uses ScaleStatus to
 retrieve the pod set controlled by this object.
-If VerticalPodAutoscaler cannot use specified target it will report
+If VerticalAutoscaler cannot use specified target it will report
 ConfigUnsupported condition.
 
-Note that VerticalPodAutoscaler does not require full implementation
+Note that VerticalAutoscaler does not require full implementation
 of scale subresource - it will not use it to modify the replica count.
 The only thing retrieved is a label selector matching pods grouped by this controller.
 

@@ -17,12 +17,15 @@ limitations under the License.
 package util
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var (
@@ -153,8 +156,8 @@ func TestDecayingHistogramLoadFromCheckpoint(t *testing.T) {
 
 	checkpoint := vpa_types.HistogramCheckpoint{
 		TotalWeight: 6.0,
-		BucketWeights: map[int]uint32{
-			0: 1,
+		BucketWeights: map[json.Number]uint32{
+			"0": 1,
 		},
 		ReferenceTimestamp: metav1.NewTime(timestamp),
 	}
@@ -163,7 +166,7 @@ func TestDecayingHistogramLoadFromCheckpoint(t *testing.T) {
 		halfLife:           time.Hour,
 		referenceTimestamp: time.Time{},
 	}
-	d.LoadFromCheckpoint(&checkpoint)
+	utilruntime.Must(d.LoadFromCheckpoint(&checkpoint))
 
 	assert.False(t, d.histogram.IsEmpty())
 	assert.Equal(t, timestamp, d.referenceTimestamp)

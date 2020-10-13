@@ -40,10 +40,11 @@ import (
 	"math"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/recommender/util"
+
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/util"
 )
 
 // ContainerNameToAggregateStateMap maps a container name to AggregateContainerState
@@ -74,7 +75,7 @@ type ContainerStateAggregator interface {
 	SubtractSample(sample *ContainerUsageSample)
 	// GetLastRecommendation returns last recommendation calculated for this
 	// aggregator.
-	GetLastRecommendation() corev1.ResourceList
+	GetLastRecommendation() core.ResourceList
 	// NeedsRecommendation returns true if this aggregator should have
 	// a recommendation calculated.
 	NeedsRecommendation() bool
@@ -97,7 +98,7 @@ type AggregateContainerState struct {
 	// Note: first/last sample timestamps as well as the sample count are based only on CPU samples.
 	FirstSampleStart  time.Time
 	LastSampleStart   time.Time
-	TotalSamplesCount int
+	TotalSamplesCount int64
 	CreationTime      time.Time
 
 	// Following fields are needed to correctly report quality metrics
@@ -105,7 +106,7 @@ type AggregateContainerState struct {
 	// we want to know if it needs recommendation, if the recommendation
 	// is present and if the automatic updates are on (are we able to
 	// apply the recommendation to the pods).
-	LastRecommendation  corev1.ResourceList
+	LastRecommendation  core.ResourceList
 	IsUnderVPA          bool
 	UpdateMode          *vpa_types.UpdateMode
 	ScalingMode         *vpa_types.ContainerScalingMode
@@ -113,7 +114,7 @@ type AggregateContainerState struct {
 }
 
 // GetLastRecommendation returns last recorded recommendation.
-func (a *AggregateContainerState) GetLastRecommendation() corev1.ResourceList {
+func (a *AggregateContainerState) GetLastRecommendation() core.ResourceList {
 	return a.LastRecommendation
 }
 
@@ -221,9 +222,9 @@ func (a *AggregateContainerState) addCPUSample(sample *ContainerUsageSample) {
 	a.TotalSamplesCount++
 }
 
-// SaveToCheckpoint serializes AggregateContainerState as VerticalPodAutoscalerCheckpointStatus.
+// SaveToCheckpoint serializes AggregateContainerState as VerticalAutoscalerCheckpointStatus.
 // The serialization may result in loss of precission of the histograms.
-func (a *AggregateContainerState) SaveToCheckpoint() (*vpa_types.VerticalPodAutoscalerCheckpointStatus, error) {
+func (a *AggregateContainerState) SaveToCheckpoint() (*vpa_types.VerticalAutoscalerCheckpointStatus, error) {
 	memory, err := a.AggregateMemoryPeaks.SaveToChekpoint()
 	if err != nil {
 		return nil, err
@@ -232,7 +233,7 @@ func (a *AggregateContainerState) SaveToCheckpoint() (*vpa_types.VerticalPodAuto
 	if err != nil {
 		return nil, err
 	}
-	return &vpa_types.VerticalPodAutoscalerCheckpointStatus{
+	return &vpa_types.VerticalAutoscalerCheckpointStatus{
 		FirstSampleStart:  metav1.NewTime(a.FirstSampleStart),
 		LastSampleStart:   metav1.NewTime(a.LastSampleStart),
 		TotalSamplesCount: a.TotalSamplesCount,
@@ -242,9 +243,9 @@ func (a *AggregateContainerState) SaveToCheckpoint() (*vpa_types.VerticalPodAuto
 	}, nil
 }
 
-// LoadFromCheckpoint deserializes data from VerticalPodAutoscalerCheckpointStatus
+// LoadFromCheckpoint deserializes data from VerticalAutoscalerCheckpointStatus
 // into the AggregateContainerState.
-func (a *AggregateContainerState) LoadFromCheckpoint(checkpoint *vpa_types.VerticalPodAutoscalerCheckpointStatus) error {
+func (a *AggregateContainerState) LoadFromCheckpoint(checkpoint *vpa_types.VerticalAutoscalerCheckpointStatus) error {
 	if checkpoint.Version != SupportedCheckpointVersion {
 		return fmt.Errorf("unsuported checkpoint version %s", checkpoint.Version)
 	}
@@ -284,7 +285,7 @@ func (a *AggregateContainerState) UpdateFromPolicy(resourcePolicy *vpa_types.Con
 	}
 	a.ControlledResources = &DefaultControlledResources
 	if resourcePolicy != nil && resourcePolicy.ControlledResources != nil {
-		a.ControlledResources = ResourceNamesApiToModel(*resourcePolicy.ControlledResources)
+		a.ControlledResources = ResourceNamesApiToModel(resourcePolicy.ControlledResources)
 	}
 }
 
@@ -332,7 +333,7 @@ func (p *ContainerStateAggregatorProxy) SubtractSample(sample *ContainerUsageSam
 }
 
 // GetLastRecommendation returns last recorded recommendation.
-func (p *ContainerStateAggregatorProxy) GetLastRecommendation() corev1.ResourceList {
+func (p *ContainerStateAggregatorProxy) GetLastRecommendation() core.ResourceList {
 	aggregator := p.cluster.findOrCreateAggregateContainerState(p.containerID)
 	return aggregator.GetLastRecommendation()
 }

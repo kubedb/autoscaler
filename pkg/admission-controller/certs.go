@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package admissioncontroller
 
 import (
 	"io/ioutil"
@@ -27,7 +27,7 @@ type certsContainer struct {
 }
 
 type certsConfig struct {
-	clientCaFile, tlsCertFile, tlsPrivateKey *string
+	clientCaFile, tlsCertFile, tlsPrivateKey string
 }
 
 func readFile(filePath string) []byte {
@@ -43,8 +43,8 @@ func readFile(filePath string) []byte {
 
 func initCerts(config certsConfig) certsContainer {
 	res := certsContainer{}
-	res.caCert = readFile(*config.clientCaFile)
-	res.serverCert = readFile(*config.tlsCertFile)
-	res.serverKey = readFile(*config.tlsPrivateKey)
+	res.caCert = readFile(config.clientCaFile)
+	res.serverCert = readFile(config.tlsCertFile)
+	res.serverKey = readFile(config.tlsPrivateKey)
 	return res
 }

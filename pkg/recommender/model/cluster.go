@@ -20,10 +20,11 @@ import (
 	"fmt"
 	"time"
 
-	apiv1 "k8s.io/api/core/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_utils "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	core "k8s.io/api/core/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_utils "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
 	"k8s.io/klog"
 )
 
@@ -47,7 +48,7 @@ type ClusterState struct {
 	// a warning about it.
 	EmptyVPAs map[VpaID]time.Time
 	// Observed VPAs. Used to check if there are updates needed.
-	ObservedVpas []*vpa_types.VerticalPodAutoscaler
+	ObservedVpas []*vpa_types.VerticalAutoscaler
 
 	// All container aggregations where the usage samples are stored.
 	aggregateStateMap aggregateContainerStatesMap
@@ -88,7 +89,7 @@ type PodState struct {
 	// Containers that belong to the Pod, keyed by the container name.
 	Containers map[string]*ContainerState
 	// PodPhase describing current life cycle phase of the Pod.
-	Phase apiv1.PodPhase
+	Phase core.PodPhase
 }
 
 // NewClusterState returns a new ClusterState with no pods.
@@ -114,7 +115,7 @@ type ContainerUsageSampleWithKey struct {
 // the Cluster object.
 // If the labels of the pod have changed, it updates the links between the containers
 // and the aggregations.
-func (cluster *ClusterState) AddOrUpdatePod(podID PodID, newLabels labels.Set, phase apiv1.PodPhase) {
+func (cluster *ClusterState) AddOrUpdatePod(podID PodID, newLabels labels.Set, phase core.PodPhase) {
 	pod, podExists := cluster.Pods[podID]
 	if !podExists {
 		pod = newPod(podID)
@@ -238,15 +239,15 @@ func (cluster *ClusterState) RecordOOM(containerID ContainerID, timestamp time.T
 // didn't yet exist. If the VPA already existed but had a different pod
 // selector, the pod selector is updated. Updates the links between the VPA and
 // all aggregations it matches.
-func (cluster *ClusterState) AddOrUpdateVpa(apiObject *vpa_types.VerticalPodAutoscaler, selector labels.Selector) error {
+func (cluster *ClusterState) AddOrUpdateVpa(apiObject *vpa_types.VerticalAutoscaler, selector labels.Selector) error {
 	vpaID := VpaID{Namespace: apiObject.Namespace, VpaName: apiObject.Name}
 	annotationsMap := apiObject.Annotations
 	conditionsMap := make(vpaConditionsMap)
 	for _, condition := range apiObject.Status.Conditions {
-		conditionsMap[condition.Type] = condition
+		conditionsMap[vpa_types.VerticalAutoscalerConditionType(condition.Type)] = condition
 	}
 	var currentRecommendation *vpa_types.RecommendedPodResources
-	if conditionsMap[vpa_types.RecommendationProvided].Status == apiv1.ConditionTrue {
+	if conditionsMap[vpa_types.RecommendationProvided].Status == core.ConditionTrue {
 		currentRecommendation = apiObject.Status.Recommendation
 	}
 
@@ -376,7 +377,7 @@ func (cluster *ClusterState) getActiveAggregateStateKeys() map[AggregateStateKey
 	activeKeys := map[AggregateStateKey]bool{}
 	for _, pod := range cluster.Pods {
 		// Pods that will not run anymore are considered inactive.
-		if pod.Phase == apiv1.PodSucceeded || pod.Phase == apiv1.PodFailed {
+		if pod.Phase == core.PodSucceeded || pod.Phase == core.PodFailed {
 			continue
 		}
 		for container := range pod.Containers {

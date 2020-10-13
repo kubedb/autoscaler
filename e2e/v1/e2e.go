@@ -27,35 +27,32 @@ import (
 	"testing"
 	"time"
 
-	"k8s.io/klog"
+	// ensure auth plugins are loaded
+	// ensure that cloud providers are loaded
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/ginkgo/config"
 	"github.com/onsi/ginkgo/reporters"
 	"github.com/onsi/gomega"
-
-	v1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtimeutils "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	clientset "k8s.io/client-go/kubernetes"
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/component-base/logs"
 	"k8s.io/component-base/version"
+	"k8s.io/klog"
 	"k8s.io/kubernetes/test/e2e/framework"
 	e2ekubectl "k8s.io/kubernetes/test/e2e/framework/kubectl"
 	e2emetrics "k8s.io/kubernetes/test/e2e/framework/metrics"
 	e2enode "k8s.io/kubernetes/test/e2e/framework/node"
 	e2epod "k8s.io/kubernetes/test/e2e/framework/pod"
+	_ "k8s.io/kubernetes/test/e2e/framework/providers/gce"
 	"k8s.io/kubernetes/test/e2e/manifest"
 	e2ereporters "k8s.io/kubernetes/test/e2e/reporters"
 	testutils "k8s.io/kubernetes/test/utils"
 	utilnet "k8s.io/utils/net"
-
-	clientset "k8s.io/client-go/kubernetes"
-	// ensure auth plugins are loaded
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
-
-	// ensure that cloud providers are loaded
-	_ "k8s.io/kubernetes/test/e2e/framework/providers/gce"
 )
 
 const (
@@ -236,7 +233,7 @@ func setupSuite() {
 				metav1.NamespaceSystem,
 				metav1.NamespaceDefault,
 				metav1.NamespacePublic,
-				v1.NamespaceNodeLease,
+				core.NamespaceNodeLease,
 			})
 		if err != nil {
 			framework.Failf("Error deleting orphaned namespaces: %v", err)

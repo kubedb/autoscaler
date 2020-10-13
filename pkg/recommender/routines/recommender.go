@@ -21,15 +21,16 @@ import (
 	"flag"
 	"time"
 
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_clientset "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/clientset/versioned"
-	vpa_api "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/clientset/versioned/typed/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/checkpoint"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/input"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/logic"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
-	metrics_recommender "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics/recommender"
-	vpa_utils "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_clientset "kubedb.dev/apimachinery/client/clientset/versioned"
+	vpa_api "kubedb.dev/apimachinery/client/clientset/versioned/typed/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/recommender/checkpoint"
+	"kubedb.dev/autoscaler/pkg/recommender/input"
+	"kubedb.dev/autoscaler/pkg/recommender/logic"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
+	metrics_recommender "kubedb.dev/autoscaler/pkg/utils/metrics/recommender"
+	vpa_utils "kubedb.dev/autoscaler/pkg/utils/vpa"
+
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 )
@@ -67,7 +68,7 @@ type recommender struct {
 	checkpointWriter              checkpoint.CheckpointWriter
 	checkpointsGCInterval         time.Duration
 	lastCheckpointGC              time.Time
-	vpaClient                     vpa_api.VerticalPodAutoscalersGetter
+	vpaClient                     vpa_api.VerticalAutoscalersGetter
 	podResourceRecommender        logic.PodResourceRecommender
 	useCheckpoints                bool
 	lastAggregateContainerStateGC time.Time
@@ -119,7 +120,7 @@ func (r *recommender) UpdateVPAs() {
 		cnt.Add(vpa)
 
 		_, err := vpa_utils.UpdateVpaStatusIfNeeded(
-			r.vpaClient.VerticalPodAutoscalers(vpa.ID.Namespace), vpa.ID.VpaName, vpa.AsStatus(), &observedVpa.Status)
+			r.vpaClient.VerticalAutoscalers(vpa.ID.Namespace), vpa.ID.VpaName, vpa.AsStatus(), &observedVpa.Status)
 		if err != nil {
 			klog.Errorf(
 				"Cannot update VPA %v object. Reason: %+v", vpa.ID.VpaName, err)
@@ -143,7 +144,7 @@ func getCappedRecommendation(vpaID model.VpaID, resources logic.RecommendedPodRe
 			UncappedTarget: model.ResourcesAsResourceList(res.Target),
 		})
 	}
-	recommendation := &vpa_types.RecommendedPodResources{containerResources}
+	recommendation := &vpa_types.RecommendedPodResources{ContainerRecommendations: containerResources}
 	cappedRecommendation, err := vpa_utils.ApplyVPAPolicy(recommendation, policy)
 	if err != nil {
 		klog.Errorf("Failed to apply policy for VPA %v/%v: %v", vpaID.Namespace, vpaID.VpaName, err)
@@ -158,7 +159,7 @@ func (r *recommender) MaintainCheckpoints(ctx context.Context, minCheckpointsPer
 		if err := r.checkpointWriter.StoreCheckpoints(ctx, now, minCheckpointsPerRun); err != nil {
 			klog.Warningf("Failed to store checkpoints. Reason: %+v", err)
 		}
-		if time.Now().Sub(r.lastCheckpointGC) > r.checkpointsGCInterval {
+		if time.Since(r.lastCheckpointGC) > r.checkpointsGCInterval {
 			r.lastCheckpointGC = now
 			r.clusterStateFeeder.GarbageCollectCheckpoints()
 		}
@@ -211,7 +212,7 @@ type RecommenderFactory struct {
 	ClusterStateFeeder     input.ClusterStateFeeder
 	CheckpointWriter       checkpoint.CheckpointWriter
 	PodResourceRecommender logic.PodResourceRecommender
-	VpaClient              vpa_api.VerticalPodAutoscalersGetter
+	VpaClient              vpa_api.VerticalAutoscalersGetter
 
 	CheckpointsGCInterval time.Duration
 	UseCheckpoints        bool
@@ -243,8 +244,8 @@ func NewRecommender(config *rest.Config, checkpointsGCInterval time.Duration, us
 	return RecommenderFactory{
 		ClusterState:           clusterState,
 		ClusterStateFeeder:     input.NewClusterStateFeeder(config, clusterState, *memorySaver, namespace),
-		CheckpointWriter:       checkpoint.NewCheckpointWriter(clusterState, vpa_clientset.NewForConfigOrDie(config).AutoscalingV1()),
-		VpaClient:              vpa_clientset.NewForConfigOrDie(config).AutoscalingV1(),
+		CheckpointWriter:       checkpoint.NewCheckpointWriter(clusterState, vpa_clientset.NewForConfigOrDie(config).AutoscalingV1alpha1()),
+		VpaClient:              vpa_clientset.NewForConfigOrDie(config).AutoscalingV1alpha1(),
 		PodResourceRecommender: logic.CreatePodResourceRecommender(),
 		CheckpointsGCInterval:  checkpointsGCInterval,
 		UseCheckpoints:         useCheckpoints,

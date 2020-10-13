@@ -21,16 +21,16 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
-	apiv1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/kubernetes/test/e2e/framework"
-	framework_deployment "k8s.io/kubernetes/test/e2e/framework/deployment"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
+	apps "k8s.io/api/apps/v1"
+	autoscaling "k8s.io/api/autoscaling/v1"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/kubernetes/test/e2e/framework"
+	framework_deployment "k8s.io/kubernetes/test/e2e/framework/deployment"
 )
 
 var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
@@ -44,9 +44,9 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("200Mi"),
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("250m"),
+					core.ResourceMemory: ParseQuantityOrDie("200Mi"),
 				},
 			}},
 		}
@@ -58,8 +58,8 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// Originally Pods had 100m CPU, 100Mi of memory, but admission controller
 		// should change it to recommended 250m CPU and 200Mi of memory.
 		for _, pod := range podList.Items {
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("250m")))
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("200Mi")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("250m")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("200Mi")))
 		}
 	})
 
@@ -71,9 +71,9 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("200Mi"),
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("250m"),
+					core.ResourceMemory: ParseQuantityOrDie("200Mi"),
 				},
 			}},
 		}
@@ -86,18 +86,18 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		for i, pod := range podList.Items {
 			podInfo := fmt.Sprintf("pod at index %d", i)
 			cpuDescription := fmt.Sprintf("%s: originally Pods had 100m CPU, admission controller should change it to recommended 250m CPU", podInfo)
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("250m")), cpuDescription)
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("250m")), cpuDescription)
 			memDescription := fmt.Sprintf("%s: originally Pods had 100Mi of memory, admission controller should change it to recommended 200Mi memory", podInfo)
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("200Mi")), memDescription)
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("200Mi")), memDescription)
 		}
 
 		ginkgo.By("Modifying recommendation.")
 		PatchVpaRecommendation(f, vpaCRD, &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("100m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("100Mi"),
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("100m"),
+					core.ResourceMemory: ParseQuantityOrDie("100Mi"),
 				},
 			}},
 		})
@@ -115,9 +115,9 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("200Mi"),
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("250m"),
+					core.ResourceMemory: ParseQuantityOrDie("200Mi"),
 				},
 			}},
 		}
@@ -129,10 +129,10 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// Originally Pods had 100m CPU, 100Mi of memory, but admission controller
 		// should change it to 250m CPU and 200Mi of memory. Limits and requests should stay equal.
 		for _, pod := range podList.Items {
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("250m")))
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("200Mi")))
-			gomega.Expect(pod.Spec.Containers[0].Resources.Limits[apiv1.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("250m")))
-			gomega.Expect(pod.Spec.Containers[0].Resources.Limits[apiv1.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("200Mi")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("250m")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("200Mi")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Limits[core.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("250m")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Limits[core.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("200Mi")))
 		}
 	})
 
@@ -146,9 +146,9 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("200Mi"),
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("250m"),
+					core.ResourceMemory: ParseQuantityOrDie("200Mi"),
 				},
 			}},
 		}
@@ -177,9 +177,9 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("200Mi"),
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("250m"),
+					core.ResourceMemory: ParseQuantityOrDie("200Mi"),
 				},
 			}},
 		}
@@ -220,9 +220,9 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    cpuRecommendation,
-					apiv1.ResourceMemory: memRecommendation,
+				Target: core.ResourceList{
+					core.ResourceCPU:    cpuRecommendation,
+					core.ResourceMemory: memRecommendation,
 				},
 			}},
 		}
@@ -232,7 +232,7 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// recommendation is 250m
 		// Max memory limit is 1Gi and ratio is 2., so max request is 0.5Gi
 		maxCpu := ParseQuantityOrDie("300m")
-		InstallLimitRangeWithMax(f, maxCpu.String(), "1Gi", apiv1.LimitTypeContainer)
+		InstallLimitRangeWithMax(f, maxCpu.String(), "1Gi", core.LimitTypeContainer)
 
 		ginkgo.By("Setting up a hamster deployment")
 		podList := startDeploymentPods(f, d)
@@ -273,9 +273,9 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("100Mi"), // memory is downscaled
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("250m"),
+					core.ResourceMemory: ParseQuantityOrDie("100Mi"), // memory is downscaled
 				},
 			}},
 		}
@@ -285,7 +285,7 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// request is 50m and min limit is 75
 		// Min memory limit is 250Mi and it applies to both limit and request. Recommendation is 100Mi.
 		// It should be scaled up to 250Mi.
-		InstallLimitRangeWithMin(f, "50m", "250Mi", apiv1.LimitTypeContainer)
+		InstallLimitRangeWithMin(f, "50m", "250Mi", core.LimitTypeContainer)
 
 		ginkgo.By("Setting up a hamster deployment")
 		podList := startDeploymentPods(f, d)
@@ -316,16 +316,16 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{
 				{
 					ContainerName: "hamster",
-					Target: apiv1.ResourceList{
-						apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-						apiv1.ResourceMemory: ParseQuantityOrDie("200Mi"),
+					Target: core.ResourceList{
+						core.ResourceCPU:    ParseQuantityOrDie("250m"),
+						core.ResourceMemory: ParseQuantityOrDie("200Mi"),
 					},
 				},
 				{
 					ContainerName: "hamster2",
-					Target: apiv1.ResourceList{
-						apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-						apiv1.ResourceMemory: ParseQuantityOrDie("200Mi"),
+					Target: core.ResourceList{
+						core.ResourceCPU:    ParseQuantityOrDie("250m"),
+						core.ResourceMemory: ParseQuantityOrDie("200Mi"),
 					},
 				},
 			},
@@ -335,7 +335,7 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// Max CPU limit is 600m for pod, 300 per container and ratio is 1.5, so max request is 200m,
 		// while recommendation is 250m
 		// Max memory limit is 1Gi and ratio is 2., so max request is 0.5Gi
-		InstallLimitRangeWithMax(f, "600m", "1Gi", apiv1.LimitTypePod)
+		InstallLimitRangeWithMax(f, "600m", "1Gi", core.LimitTypePod)
 
 		ginkgo.By("Setting up a hamster deployment")
 		podList := startDeploymentPods(f, d)
@@ -366,16 +366,16 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{
 				{
 					ContainerName: "hamster",
-					Target: apiv1.ResourceList{
-						apiv1.ResourceCPU:    ParseQuantityOrDie("120m"),
-						apiv1.ResourceMemory: ParseQuantityOrDie("100Mi"), // memory is downscaled
+					Target: core.ResourceList{
+						core.ResourceCPU:    ParseQuantityOrDie("120m"),
+						core.ResourceMemory: ParseQuantityOrDie("100Mi"), // memory is downscaled
 					},
 				},
 				{
 					ContainerName: "hamster2",
-					Target: apiv1.ResourceList{
-						apiv1.ResourceCPU:    ParseQuantityOrDie("120m"),
-						apiv1.ResourceMemory: ParseQuantityOrDie("100Mi"), // memory is downscaled
+					Target: core.ResourceList{
+						core.ResourceCPU:    ParseQuantityOrDie("120m"),
+						core.ResourceMemory: ParseQuantityOrDie("100Mi"), // memory is downscaled
 					},
 				},
 			},
@@ -386,7 +386,7 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// request so min request is 50m and min limit is 75
 		// Min memory limit is 500Mi per pod, 250 per container and it applies to both limit and request.
 		// Recommendation is 100Mi it should be scaled up to 250Mi.
-		InstallLimitRangeWithMin(f, "100m", "500Mi", apiv1.LimitTypePod)
+		InstallLimitRangeWithMin(f, "100m", "500Mi", core.LimitTypePod)
 
 		ginkgo.By("Setting up a hamster deployment")
 		podList := startDeploymentPods(f, d)
@@ -413,18 +413,18 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("250m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("200Mi"),
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("250m"),
+					core.ResourceMemory: ParseQuantityOrDie("200Mi"),
 				},
 			}},
 		}
 		vpaCRD.Spec.ResourcePolicy = &vpa_types.PodResourcePolicy{
 			ContainerPolicies: []vpa_types.ContainerResourcePolicy{{
 				ContainerName: "hamster",
-				MaxAllowed: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("233m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("150Mi"),
+				MaxAllowed: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("233m"),
+					core.ResourceMemory: ParseQuantityOrDie("150Mi"),
 				},
 			}},
 		}
@@ -437,8 +437,8 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// should change it to 233m CPU and 150Mi of memory (as this is the recommendation
 		// capped to max specified in VPA)
 		for _, pod := range podList.Items {
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("233m")))
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("150Mi")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("233m")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("150Mi")))
 		}
 	})
 
@@ -450,18 +450,18 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		vpaCRD.Status.Recommendation = &vpa_types.RecommendedPodResources{
 			ContainerRecommendations: []vpa_types.RecommendedContainerResources{{
 				ContainerName: "hamster",
-				Target: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("50m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("60Mi"),
+				Target: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("50m"),
+					core.ResourceMemory: ParseQuantityOrDie("60Mi"),
 				},
 			}},
 		}
 		vpaCRD.Spec.ResourcePolicy = &vpa_types.PodResourcePolicy{
 			ContainerPolicies: []vpa_types.ContainerResourcePolicy{{
 				ContainerName: "hamster",
-				MinAllowed: apiv1.ResourceList{
-					apiv1.ResourceCPU:    ParseQuantityOrDie("90m"),
-					apiv1.ResourceMemory: ParseQuantityOrDie("80Mi"),
+				MinAllowed: core.ResourceList{
+					core.ResourceCPU:    ParseQuantityOrDie("90m"),
+					core.ResourceMemory: ParseQuantityOrDie("80Mi"),
 				},
 			}},
 		}
@@ -474,8 +474,8 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		// should change it to recommended 90m CPU and 800Mi of memory (as this the
 		// recommendation raised to min specified in VPA)
 		for _, pod := range podList.Items {
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("90m")))
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("80Mi")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("90m")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("80Mi")))
 		}
 	})
 
@@ -491,8 +491,8 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 
 		// VPA has no recommendation, so user's request is passed through
 		for _, pod := range podList.Items {
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("100m")))
-			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[apiv1.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("100Mi")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceCPU]).To(gomega.Equal(ParseQuantityOrDie("100m")))
+			gomega.Expect(pod.Spec.Containers[0].Resources.Requests[core.ResourceMemory]).To(gomega.Equal(ParseQuantityOrDie("100Mi")))
 		}
 	})
 
@@ -515,8 +515,8 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 	ginkgo.It("accepts valid and rejects invalid VPA object", func() {
 		ginkgo.By("Setting up valid VPA object")
 		validVPA := []byte(`{
-			"kind": "VerticalPodAutoscaler",
-			"apiVersion": "autoscaling.k8s.io/v1",
+			"kind": "VerticalAutoscaler",
+			"apiVersion": "autoscaling.kubedb.com/v1alpha1",
 			"metadata": {"name": "hamster-vpa-valid"},
 			"spec": {
 				"targetRef": {
@@ -535,8 +535,8 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 		ginkgo.By("Setting up invalid VPA object")
 		// The invalid object differs by name and minAllowed - there is an invalid "requests" field.
 		invalidVPA := []byte(`{
-			"kind": "VerticalPodAutoscaler",
-			"apiVersion": "autoscaling.k8s.io/v1",
+			"kind": "VerticalAutoscaler",
+			"apiVersion": "autoscaling.kubedb.com/v1alpha1",
 			"metadata": {"name": "hamster-vpa-invalid"},
 			"spec": {
 				"targetRef": {
@@ -556,7 +556,7 @@ var _ = AdmissionControllerE2eDescribe("Admission-controller", func() {
 
 })
 
-func startDeploymentPods(f *framework.Framework, deployment *appsv1.Deployment) *apiv1.PodList {
+func startDeploymentPods(f *framework.Framework, deployment *apps.Deployment) *core.PodList {
 	// Apiserver watch can lag depending on cached object count and apiserver resource usage.
 	// We assume that watch can lag up to 5 seconds.
 	const apiserverWatchLag = 5 * time.Second
@@ -585,12 +585,12 @@ func startDeploymentPods(f *framework.Framework, deployment *appsv1.Deployment) 
 	// TODO(#2631): Remove sleep when issue is fixed.
 	time.Sleep(apiserverWatchLag)
 
-	scale := autoscalingv1.Scale{
+	scale := autoscaling.Scale{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      deployment.ObjectMeta.Name,
 			Namespace: deployment.ObjectMeta.Namespace,
 		},
-		Spec: autoscalingv1.ScaleSpec{
+		Spec: autoscaling.ScaleSpec{
 			Replicas: desiredPodCount,
 		},
 	}

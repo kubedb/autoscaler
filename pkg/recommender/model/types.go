@@ -17,7 +17,7 @@ limitations under the License.
 package model
 
 import (
-	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/klog"
 )
@@ -79,17 +79,17 @@ func ScaleResource(amount ResourceAmount, factor float64) ResourceAmount {
 }
 
 // ResourcesAsResourceList converts internal Resources representation to ResourcesList.
-func ResourcesAsResourceList(resources Resources) apiv1.ResourceList {
-	result := make(apiv1.ResourceList)
+func ResourcesAsResourceList(resources Resources) core.ResourceList {
+	result := make(core.ResourceList)
 	for key, resourceAmount := range resources {
-		var newKey apiv1.ResourceName
+		var newKey core.ResourceName
 		var quantity resource.Quantity
 		switch key {
 		case ResourceCPU:
-			newKey = apiv1.ResourceCPU
+			newKey = core.ResourceCPU
 			quantity = QuantityFromCPUAmount(resourceAmount)
 		case ResourceMemory:
-			newKey = apiv1.ResourceMemory
+			newKey = core.ResourceMemory
 			quantity = QuantityFromMemoryAmount(resourceAmount)
 		default:
 			klog.Errorf("Cannot translate %v resource name", key)
@@ -101,13 +101,13 @@ func ResourcesAsResourceList(resources Resources) apiv1.ResourceList {
 }
 
 // ResourceNamesApiToModel converts an array of resource names expressed in API types into model types.
-func ResourceNamesApiToModel(resources []apiv1.ResourceName) *[]ResourceName {
+func ResourceNamesApiToModel(resources []core.ResourceName) *[]ResourceName {
 	result := make([]ResourceName, 0, len(resources))
 	for _, resource := range resources {
 		switch resource {
-		case apiv1.ResourceCPU:
+		case core.ResourceCPU:
 			result = append(result, ResourceCPU)
-		case apiv1.ResourceMemory:
+		case core.ResourceMemory:
 			result = append(result, ResourceMemory)
 		default:
 			klog.Errorf("Cannot translate %v resource name", resource)

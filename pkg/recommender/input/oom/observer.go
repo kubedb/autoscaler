@@ -20,11 +20,11 @@ import (
 	"strings"
 	"time"
 
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
-	"k8s.io/client-go/tools/cache"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
 
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 )
 
@@ -38,7 +38,7 @@ type OomInfo struct {
 // Observer can observe pod resource update and collect OOM events.
 type Observer interface {
 	GetObservedOomsChannel() chan OomInfo
-	OnEvent(*apiv1.Event)
+	OnEvent(*core.Event)
 	cache.ResourceEventHandler
 }
 
@@ -58,7 +58,7 @@ func (o *observer) GetObservedOomsChannel() chan OomInfo {
 	return o.observedOomsChannel
 }
 
-func parseEvictionEvent(event *apiv1.Event) []OomInfo {
+func parseEvictionEvent(event *core.Event) []OomInfo {
 	if event.Reason != "Evicted" ||
 		event.InvolvedObject.Kind != "Pod" {
 		return []OomInfo{}
@@ -106,14 +106,14 @@ func parseEvictionEvent(event *apiv1.Event) []OomInfo {
 }
 
 // OnEvent inspects k8s eviction events and translates them to OomInfo.
-func (o *observer) OnEvent(event *apiv1.Event) {
+func (o *observer) OnEvent(event *core.Event) {
 	klog.V(1).Infof("OOM Observer processing event: %+v", event)
 	for _, oomInfo := range parseEvictionEvent(event) {
 		o.observedOomsChannel <- oomInfo
 	}
 }
 
-func findStatus(name string, containerStatuses []apiv1.ContainerStatus) *apiv1.ContainerStatus {
+func findStatus(name string, containerStatuses []core.ContainerStatus) *core.ContainerStatus {
 	for _, containerStatus := range containerStatuses {
 		if containerStatus.Name == name {
 			return &containerStatus
@@ -122,7 +122,7 @@ func findStatus(name string, containerStatuses []apiv1.ContainerStatus) *apiv1.C
 	return nil
 }
 
-func findSpec(name string, containers []apiv1.Container) *apiv1.Container {
+func findSpec(name string, containers []core.Container) *core.Container {
 	for _, containerSpec := range containers {
 		if containerSpec.Name == name {
 			return &containerSpec
@@ -137,13 +137,15 @@ func (*observer) OnAdd(obj interface{}) {}
 // OnUpdate inspects if the update contains oom information and
 // passess it to the ObservedOomsChannel
 func (o *observer) OnUpdate(oldObj, newObj interface{}) {
-	oldPod, ok := oldObj.(*apiv1.Pod)
+	oldPod, ok := oldObj.(*core.Pod)
 	if oldPod == nil || !ok {
 		klog.Errorf("OOM observer received invalid oldObj: %v", oldObj)
+		return
 	}
-	newPod, ok := newObj.(*apiv1.Pod)
+	newPod, ok := newObj.(*core.Pod)
 	if newPod == nil || !ok {
 		klog.Errorf("OOM observer received invalid newObj: %v", newObj)
+		return
 	}
 
 	for _, containerStatus := range newPod.Status.ContainerStatuses {
@@ -155,7 +157,7 @@ func (o *observer) OnUpdate(oldObj, newObj interface{}) {
 			if oldStatus != nil && containerStatus.RestartCount > oldStatus.RestartCount {
 				oldSpec := findSpec(containerStatus.Name, oldPod.Spec.Containers)
 				if oldSpec != nil {
-					memory := oldSpec.Resources.Requests[apiv1.ResourceMemory]
+					memory := oldSpec.Resources.Requests[core.ResourceMemory]
 					oomInfo := OomInfo{
 						Timestamp: containerStatus.LastTerminationState.Terminated.FinishedAt.Time.UTC(),
 						Memory:    model.ResourceAmount(memory.Value()),

@@ -19,31 +19,31 @@ package vpa
 import (
 	"testing"
 
-	core "k8s.io/api/core/v1"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	target_mock "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/target/mock"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	target_mock "kubedb.dev/autoscaler/pkg/target/mock"
+	"kubedb.dev/autoscaler/pkg/utils/test"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func parseLabelSelector(selector string) labels.Selector {
-	labelSelector, _ := meta.ParseToLabelSelector(selector)
-	parsedSelector, _ := meta.LabelSelectorAsSelector(labelSelector)
+	labelSelector, _ := metav1.ParseToLabelSelector(selector)
+	parsedSelector, _ := metav1.LabelSelectorAsSelector(labelSelector)
 	return parsedSelector
 }
 
 func TestGetMatchingVpa(t *testing.T) {
 	podBuilder := test.Pod().WithName("test-pod").WithLabels(map[string]string{"app": "test"}).
 		AddContainer(test.Container().WithName("i-am-container").Get())
-	vpaBuilder := test.VerticalPodAutoscaler().WithContainer("i-am-container")
+	vpaBuilder := test.VerticalAutoscaler().WithContainer("i-am-container")
 	testCases := []struct {
 		name            string
 		pod             *core.Pod
-		vpas            []*vpa_types.VerticalPodAutoscaler
+		vpas            []*vpa_types.VerticalAutoscaler
 		labelSelector   string
 		expectedFound   bool
 		expectedVpaName string
@@ -51,7 +51,7 @@ func TestGetMatchingVpa(t *testing.T) {
 		{
 			name: "matching selector",
 			pod:  podBuilder.Get(),
-			vpas: []*vpa_types.VerticalPodAutoscaler{
+			vpas: []*vpa_types.VerticalAutoscaler{
 				vpaBuilder.WithUpdateMode(vpa_types.UpdateModeAuto).WithName("auto-vpa").Get(),
 			},
 			labelSelector:   "app = test",
@@ -60,7 +60,7 @@ func TestGetMatchingVpa(t *testing.T) {
 		}, {
 			name: "not matching selector",
 			pod:  podBuilder.Get(),
-			vpas: []*vpa_types.VerticalPodAutoscaler{
+			vpas: []*vpa_types.VerticalAutoscaler{
 				vpaBuilder.WithUpdateMode(vpa_types.UpdateModeAuto).WithName("auto-vpa").Get(),
 			},
 			labelSelector: "app = differentApp",
@@ -68,7 +68,7 @@ func TestGetMatchingVpa(t *testing.T) {
 		}, {
 			name: "off mode",
 			pod:  podBuilder.Get(),
-			vpas: []*vpa_types.VerticalPodAutoscaler{
+			vpas: []*vpa_types.VerticalAutoscaler{
 				vpaBuilder.WithUpdateMode(vpa_types.UpdateModeOff).WithName("off-vpa").Get(),
 			},
 			labelSelector: "app = test",
@@ -76,7 +76,7 @@ func TestGetMatchingVpa(t *testing.T) {
 		}, {
 			name: "two vpas one in off mode",
 			pod:  podBuilder.Get(),
-			vpas: []*vpa_types.VerticalPodAutoscaler{
+			vpas: []*vpa_types.VerticalAutoscaler{
 				vpaBuilder.WithUpdateMode(vpa_types.UpdateModeOff).WithName("off-vpa").Get(),
 				vpaBuilder.WithUpdateMode(vpa_types.UpdateModeAuto).WithName("auto-vpa").Get(),
 			},
@@ -86,7 +86,7 @@ func TestGetMatchingVpa(t *testing.T) {
 		}, {
 			name: "initial mode",
 			pod:  podBuilder.Get(),
-			vpas: []*vpa_types.VerticalPodAutoscaler{
+			vpas: []*vpa_types.VerticalAutoscaler{
 				vpaBuilder.WithUpdateMode(vpa_types.UpdateModeInitial).WithName("initial-vpa").Get(),
 			},
 			labelSelector:   "app = test",
@@ -95,7 +95,7 @@ func TestGetMatchingVpa(t *testing.T) {
 		}, {
 			name:          "no vpa objects",
 			pod:           podBuilder.Get(),
-			vpas:          []*vpa_types.VerticalPodAutoscaler{},
+			vpas:          []*vpa_types.VerticalAutoscaler{},
 			labelSelector: "app = test",
 			expectedFound: false,
 		},
@@ -107,11 +107,11 @@ func TestGetMatchingVpa(t *testing.T) {
 
 			mockSelectorFetcher := target_mock.NewMockVpaTargetSelectorFetcher(ctrl)
 
-			vpaNamespaceLister := &test.VerticalPodAutoscalerListerMock{}
+			vpaNamespaceLister := &test.VerticalAutoscalerListerMock{}
 			vpaNamespaceLister.On("List").Return(tc.vpas, nil)
 
-			vpaLister := &test.VerticalPodAutoscalerListerMock{}
-			vpaLister.On("VerticalPodAutoscalers", "default").Return(vpaNamespaceLister)
+			vpaLister := &test.VerticalAutoscalerListerMock{}
+			vpaLister.On("VerticalAutoscalers", "default").Return(vpaNamespaceLister)
 
 			mockSelectorFetcher.EXPECT().Fetch(gomock.Any()).AnyTimes().Return(parseLabelSelector(tc.labelSelector), nil)
 			matcher := NewMatcher(vpaLister, mockSelectorFetcher)

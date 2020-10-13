@@ -19,8 +19,9 @@ package priority
 import (
 	"fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
+	core "k8s.io/api/core/v1"
 )
 
 type fakePriorityProcessor struct {
@@ -35,7 +36,7 @@ func NewFakeProcessor(priorities map[string]PodPriority) PriorityProcessor {
 	}
 }
 
-func (f *fakePriorityProcessor) GetUpdatePriority(pod *corev1.Pod, vpa *vpa_types.VerticalPodAutoscaler,
+func (f *fakePriorityProcessor) GetUpdatePriority(pod *core.Pod, vpa *vpa_types.VerticalAutoscaler,
 	recommendation *vpa_types.RecommendedPodResources) PodPriority {
 	prio, ok := f.priorities[pod.Name]
 	if !ok {

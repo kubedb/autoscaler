@@ -21,14 +21,14 @@ import (
 	"math"
 	"testing"
 
-	apiv1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/limitrange"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
-	vpa_api_util "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/utils/limitrange"
+	"kubedb.dev/autoscaler/pkg/utils/test"
+	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
 
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func mustParseResourcePointer(val string) *resource.Quantity {
@@ -37,17 +37,17 @@ func mustParseResourcePointer(val string) *resource.Quantity {
 }
 
 type fakeLimitRangeCalculator struct {
-	containerLimitRange *apiv1.LimitRangeItem
+	containerLimitRange *core.LimitRangeItem
 	containerErr        error
-	podLimitRange       *apiv1.LimitRangeItem
+	podLimitRange       *core.LimitRangeItem
 	podErr              error
 }
 
-func (nlrc *fakeLimitRangeCalculator) GetContainerLimitRangeItem(namespace string) (*apiv1.LimitRangeItem, error) {
+func (nlrc *fakeLimitRangeCalculator) GetContainerLimitRangeItem(namespace string) (*core.LimitRangeItem, error) {
 	return nlrc.containerLimitRange, nlrc.containerErr
 }
 
-func (nlrc *fakeLimitRangeCalculator) GetPodLimitRangeItem(namespace string) (*apiv1.LimitRangeItem, error) {
+func (nlrc *fakeLimitRangeCalculator) GetPodLimitRangeItem(namespace string) (*core.LimitRangeItem, error) {
 	return nlrc.podLimitRange, nlrc.podErr
 }
 
@@ -55,7 +55,7 @@ func TestUpdateResourceRequests(t *testing.T) {
 	containerName := "container1"
 	vpaName := "vpa1"
 	labels := map[string]string{"app": "testingApp"}
-	vpaBuilder := test.VerticalPodAutoscaler().
+	vpaBuilder := test.VerticalAutoscaler().
 		WithName(vpaName).
 		WithContainer(containerName).
 		WithTarget("2", "200Mi").
@@ -112,15 +112,15 @@ func TestUpdateResourceRequests(t *testing.T) {
 
 	testCases := []struct {
 		name              string
-		pod               *apiv1.Pod
-		vpa               *vpa_types.VerticalPodAutoscaler
+		pod               *core.Pod
+		vpa               *vpa_types.VerticalAutoscaler
 		expectedAction    bool
 		expectedError     error
 		expectedMem       resource.Quantity
 		expectedCPU       resource.Quantity
 		expectedCPULimit  *resource.Quantity
 		expectedMemLimit  *resource.Quantity
-		limitRange        *apiv1.LimitRangeItem
+		limitRange        *core.LimitRangeItem
 		limitRangeCalcErr error
 		annotations       vpa_api_util.ContainerToAnnotationsMap
 	}{
@@ -281,11 +281,11 @@ func TestUpdateResourceRequests(t *testing.T) {
 			expectedMem:      resource.MustParse("200Mi"),
 			expectedCPULimit: mustParseResourcePointer("2"),
 			expectedMemLimit: mustParseResourcePointer("200Mi"),
-			limitRange: &apiv1.LimitRangeItem{
-				Type: apiv1.LimitTypeContainer,
-				Default: apiv1.ResourceList{
-					apiv1.ResourceCPU:    resource.MustParse("2"),
-					apiv1.ResourceMemory: resource.MustParse("100Mi"),
+			limitRange: &core.LimitRangeItem{
+				Type: core.LimitTypeContainer,
+				Default: core.ResourceList{
+					core.ResourceCPU:    resource.MustParse("2"),
+					core.ResourceMemory: resource.MustParse("100Mi"),
 				},
 			},
 		},
@@ -309,13 +309,13 @@ func TestUpdateResourceRequests(t *testing.T) {
 					return
 				}
 
-				cpuRequest := resources[0].Requests[apiv1.ResourceCPU]
+				cpuRequest := resources[0].Requests[core.ResourceCPU]
 				assert.Equal(t, tc.expectedCPU.Value(), cpuRequest.Value(), "cpu request doesn't match")
 
-				memoryRequest := resources[0].Requests[apiv1.ResourceMemory]
+				memoryRequest := resources[0].Requests[core.ResourceMemory]
 				assert.Equal(t, tc.expectedMem.Value(), memoryRequest.Value(), "memory request doesn't match")
 
-				cpuLimit, cpuLimitPresent := resources[0].Limits[apiv1.ResourceCPU]
+				cpuLimit, cpuLimitPresent := resources[0].Limits[core.ResourceCPU]
 				if tc.expectedCPULimit == nil {
 					assert.False(t, cpuLimitPresent, "expected no cpu limit, got %s", cpuLimit.String())
 				} else {
@@ -324,7 +324,7 @@ func TestUpdateResourceRequests(t *testing.T) {
 					}
 				}
 
-				memLimit, memLimitPresent := resources[0].Limits[apiv1.ResourceMemory]
+				memLimit, memLimitPresent := resources[0].Limits[core.ResourceMemory]
 				if tc.expectedMemLimit == nil {
 					assert.False(t, memLimitPresent, "expected no memory limit, got %s", memLimit.String())
 				} else {

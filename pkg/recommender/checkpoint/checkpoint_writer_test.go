@@ -21,19 +21,20 @@ import (
 	"testing"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
 
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 // TODO: Extract these constants to a common test module.
 var (
-	testPodID1       = model.PodID{"namespace-1", "pod-1"}
-	testContainerID1 = model.ContainerID{testPodID1, "container-1"}
-	testVpaID1       = model.VpaID{"namespace-1", "vpa-1"}
+	testPodID1       = model.PodID{Namespace: "namespace-1", PodName: "pod-1"}
+	testContainerID1 = model.ContainerID{PodID: testPodID1, ContainerName: "container-1"}
+	testVpaID1       = model.VpaID{Namespace: "namespace-1", VpaName: "vpa-1"}
 	testLabels       = map[string]string{"label-1": "value-1"}
 	testSelectorStr  = "label-1 = value-1"
 	testRequest      = model.Resources{
@@ -43,7 +44,7 @@ var (
 )
 
 func addVpa(t *testing.T, cluster *model.ClusterState, vpaID model.VpaID, selector string) *model.Vpa {
-	var apiObject vpa_types.VerticalPodAutoscaler
+	var apiObject vpa_types.VerticalAutoscaler
 	apiObject.Namespace = vpaID.Namespace
 	apiObject.Name = vpaID.VpaName
 	labelSelector, _ := metav1.ParseToLabelSelector(selector)
@@ -57,13 +58,16 @@ func addVpa(t *testing.T, cluster *model.ClusterState, vpaID model.VpaID, select
 
 func TestMergeContainerStateForCheckpointDropsRecentMemoryPeak(t *testing.T) {
 	cluster := model.NewClusterState()
-	cluster.AddOrUpdatePod(testPodID1, testLabels, v1.PodRunning)
+	cluster.AddOrUpdatePod(testPodID1, testLabels, core.PodRunning)
 	assert.NoError(t, cluster.AddOrUpdateContainer(testContainerID1, testRequest))
 	container := cluster.GetContainer(testContainerID1)
 
 	timeNow := time.Unix(1, 0)
 	container.AddSample(&model.ContainerUsageSample{
-		timeNow, model.MemoryAmountFromBytes(1024 * 1024 * 1024), testRequest[model.ResourceMemory], model.ResourceMemory})
+		MeasureStart: timeNow, Usage: model.MemoryAmountFromBytes(1024 * 1024 * 1024),
+		Request:  testRequest[model.ResourceMemory],
+		Resource: model.ResourceMemory,
+	})
 	vpa := addVpa(t, cluster, testVpaID1, testSelectorStr)
 
 	// Verify that the current peak is excluded from the aggregation.
@@ -94,10 +98,10 @@ func TestIsFetchingHistory(t *testing.T) {
 		{
 			vpa: model.Vpa{
 				PodSelector: nil,
-				Conditions: map[vpa_types.VerticalPodAutoscalerConditionType]vpa_types.VerticalPodAutoscalerCondition{
+				Conditions: map[vpa_types.VerticalAutoscalerConditionType]kmapi.Condition{
 					vpa_types.FetchingHistory: {
-						Type:   vpa_types.FetchingHistory,
-						Status: v1.ConditionFalse,
+						Type:   string(vpa_types.FetchingHistory),
+						Status: core.ConditionFalse,
 					},
 				},
 			},
@@ -106,10 +110,10 @@ func TestIsFetchingHistory(t *testing.T) {
 		{
 			vpa: model.Vpa{
 				PodSelector: nil,
-				Conditions: map[vpa_types.VerticalPodAutoscalerConditionType]vpa_types.VerticalPodAutoscalerCondition{
+				Conditions: map[vpa_types.VerticalAutoscalerConditionType]kmapi.Condition{
 					vpa_types.FetchingHistory: {
-						Type:   vpa_types.FetchingHistory,
-						Status: v1.ConditionTrue,
+						Type:   string(vpa_types.FetchingHistory),
+						Status: core.ConditionTrue,
 					},
 				},
 			},

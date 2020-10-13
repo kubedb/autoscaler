@@ -24,7 +24,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	_ "k8s.io/component-base/metrics/prometheus/restclient" // for client-go metrics registration
 	"k8s.io/klog"
 )
@@ -77,7 +76,7 @@ func (t *ExecutionTimer) ObserveStep(step string) {
 
 // ObserveTotal measures the execution time from the creation of the ExecutionTimer
 func (t *ExecutionTimer) ObserveTotal() {
-	(*t.histo).WithLabelValues("total").Observe(time.Now().Sub(t.start).Seconds())
+	(*t.histo).WithLabelValues("total").Observe(time.Since(t.start).Seconds())
 }
 
 // CreateExecutionTimeMetric prepares a new histogram labeled with execution step

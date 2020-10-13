@@ -60,14 +60,14 @@ Webhooks:
     Resources:
       pods
     API Groups:
-      autoscaling.k8s.io
+      autoscaling.kubedb.com
     API Versions:
       v1beta1
     Operations:
       CREATE
       UPDATE
     Resources:
-      verticalpodautoscalers
+      verticalautoscalers
 ```
 
 If the webhook config doesn't exist, something got wrong with webhook

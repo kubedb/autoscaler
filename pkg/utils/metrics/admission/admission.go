@@ -21,8 +21,9 @@ import (
 	"fmt"
 	"time"
 
+	"kubedb.dev/autoscaler/pkg/utils/metrics"
+
 	"github.com/prometheus/client_golang/prometheus"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics"
 )
 
 const (
@@ -56,7 +57,7 @@ const (
 	Unknown AdmissionResource = "unknown"
 	// Pod means Kubernetes Pod
 	Pod AdmissionResource = "Pod"
-	// Vpa means VerticalPodAutoscaler object (CRD)
+	// Vpa means VerticalAutoscaler object (CRD)
 	Vpa AdmissionResource = "VPA"
 )
 
@@ -100,5 +101,5 @@ func NewAdmissionLatency() *AdmissionLatency {
 
 // Observe measures the execution time from when the AdmissionLatency was created
 func (t *AdmissionLatency) Observe(status AdmissionStatus, resource AdmissionResource) {
-	(*t.histo).WithLabelValues(string(status), string(resource)).Observe(time.Now().Sub(t.start).Seconds())
+	(*t.histo).WithLabelValues(string(status), string(resource)).Observe(time.Since(t.start).Seconds())
 }

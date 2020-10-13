@@ -17,12 +17,13 @@ limitations under the License.
 package patch
 
 import (
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/admission-controller/resource"
+
 	core "k8s.io/api/core/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 )
 
 // Calculator is capable of calculating required patches for pod.
 type Calculator interface {
-	CalculatePatches(pod *core.Pod, vpa *vpa_types.VerticalPodAutoscaler) ([]resource.PatchRecord, error)
+	CalculatePatches(pod *core.Pod, vpa *vpa_types.VerticalAutoscaler) ([]resource.PatchRecord, error)
 }

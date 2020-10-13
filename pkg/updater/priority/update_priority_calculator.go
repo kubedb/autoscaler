@@ -21,11 +21,12 @@ import (
 	"sort"
 	"time"
 
-	apiv1 "k8s.io/api/core/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/utils/annotations"
+	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/sets"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/annotations"
-	vpa_api_util "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
 	"k8s.io/klog"
 )
 
@@ -49,7 +50,7 @@ var (
 // i.e. pod with 10M current memory and recommendation 20M will have higher update priority
 // than pod with 100M current memory and 150M recommendation (100% increase vs 50% increase)
 type UpdatePriorityCalculator struct {
-	vpa                     *vpa_types.VerticalPodAutoscaler
+	vpa                     *vpa_types.VerticalAutoscaler
 	pods                    []prioritizedPod
 	config                  *UpdateConfig
 	recommendationProcessor vpa_api_util.RecommendationProcessor
@@ -67,7 +68,7 @@ type UpdateConfig struct {
 // an update config.
 // If the vpa resource policy is nil, there will be no policy restriction on update.
 // If the given update config is nil, default values are used.
-func NewUpdatePriorityCalculator(vpa *vpa_types.VerticalPodAutoscaler,
+func NewUpdatePriorityCalculator(vpa *vpa_types.VerticalAutoscaler,
 	config *UpdateConfig,
 	recommendationProcessor vpa_api_util.RecommendationProcessor,
 	priorityProcessor PriorityProcessor) UpdatePriorityCalculator {
@@ -82,7 +83,7 @@ func NewUpdatePriorityCalculator(vpa *vpa_types.VerticalPodAutoscaler,
 }
 
 // AddPod adds pod to the UpdatePriorityCalculator.
-func (calc *UpdatePriorityCalculator) AddPod(pod *apiv1.Pod, now time.Time) {
+func (calc *UpdatePriorityCalculator) AddPod(pod *core.Pod, now time.Time) {
 	processedRecommendation, _, err := calc.recommendationProcessor.Apply(calc.vpa.Status.Recommendation, calc.vpa.Spec.ResourcePolicy, calc.vpa.Status.Conditions, pod)
 	if err != nil {
 		klog.V(2).Infof("cannot process recommendation for pod %s/%s: %v", pod.Namespace, pod.Name, err)
@@ -152,10 +153,10 @@ func (calc *UpdatePriorityCalculator) AddPod(pod *apiv1.Pod, now time.Time) {
 }
 
 // GetSortedPods returns a list of pods ordered by update priority (highest update priority first)
-func (calc *UpdatePriorityCalculator) GetSortedPods(admission PodEvictionAdmission) []*apiv1.Pod {
+func (calc *UpdatePriorityCalculator) GetSortedPods(admission PodEvictionAdmission) []*core.Pod {
 	sort.Sort(byPriorityDesc(calc.pods))
 
-	result := []*apiv1.Pod{}
+	result := []*core.Pod{}
 	for _, podPrio := range calc.pods {
 		if admission == nil || admission.Admit(podPrio.pod, podPrio.recommendation) {
 			result = append(result, podPrio.pod)
@@ -167,7 +168,7 @@ func (calc *UpdatePriorityCalculator) GetSortedPods(admission PodEvictionAdmissi
 	return result
 }
 
-func parseVpaObservedContainers(pod *apiv1.Pod) (bool, sets.String) {
+func parseVpaObservedContainers(pod *core.Pod) (bool, sets.String) {
 	observedContainers, hasObservedContainers := pod.GetAnnotations()[annotations.VpaObservedContainersLabel]
 	vpaContainerSet := sets.NewString()
 	if hasObservedContainers {
@@ -182,7 +183,7 @@ func parseVpaObservedContainers(pod *apiv1.Pod) (bool, sets.String) {
 }
 
 type prioritizedPod struct {
-	pod            *apiv1.Pod
+	pod            *core.Pod
 	priority       PodPriority
 	recommendation *vpa_types.RecommendedPodResources
 }

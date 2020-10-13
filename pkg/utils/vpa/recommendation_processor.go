@@ -17,8 +17,10 @@ limitations under the License.
 package api
 
 import (
-	"k8s.io/api/core/v1"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
+	core "k8s.io/api/core/v1"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 // ContainerToAnnotationsMap contains annotations per container.
@@ -31,6 +33,6 @@ type RecommendationProcessor interface {
 	// Must return a non-nil pointer to RecommendedPodResources or error.
 	Apply(podRecommendation *vpa_types.RecommendedPodResources,
 		policy *vpa_types.PodResourcePolicy,
-		conditions []vpa_types.VerticalPodAutoscalerCondition,
-		pod *v1.Pod) (*vpa_types.RecommendedPodResources, ContainerToAnnotationsMap, error)
+		conditions []kmapi.Condition,
+		pod *core.Pod) (*vpa_types.RecommendedPodResources, ContainerToAnnotationsMap, error)
 }

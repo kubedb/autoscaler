@@ -19,7 +19,7 @@ function check_obsolete_cluster_role()
     kubectl get clusterrole system:admission-controller &> /dev/null
     OBSOLETE_CLUSTERROLE_EXISTS=$?
     if [[ $ret -eq 0 ]]; then
-        kubectl get clusterrole system:admission-controller -o yaml 2>&1 | grep verticalpodautoscalers &> /dev/null
+        kubectl get clusterrole system:admission-controller -o yaml 2>&1 | grep verticalautoscalers &> /dev/null
         OBSOLETE_CLUSTERROLE_EXISTS=$?
     fi
 

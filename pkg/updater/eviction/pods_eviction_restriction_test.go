@@ -21,12 +21,13 @@ import (
 	"testing"
 	"time"
 
+	"kubedb.dev/autoscaler/pkg/utils/test"
+
 	"github.com/stretchr/testify/assert"
-	appsv1 "k8s.io/api/apps/v1"
+	apps "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
 	appsinformer "k8s.io/client-go/informers/apps/v1"
 	coreinformer "k8s.io/client-go/informers/core/v1"
 	"k8s.io/client-go/kubernetes/fake"
@@ -34,14 +35,14 @@ import (
 )
 
 type podWithExpectations struct {
-	pod             *apiv1.Pod
+	pod             *core.Pod
 	canEvict        bool
 	evictionSuccess bool
 }
 
 func TestEvictReplicatedByController(t *testing.T) {
 
-	rc := apiv1.ReplicationController{
+	rc := core.ReplicationController{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rc",
 			Namespace: "default",
@@ -185,7 +186,7 @@ func TestEvictReplicatedByController(t *testing.T) {
 				},
 				{
 					// Only pending pod can be evicted without violation of tollerance
-					pod:             generatePod().WithPhase(apiv1.PodPending).Get(),
+					pod:             generatePod().WithPhase(core.PodPending).Get(),
 					canEvict:        true,
 					evictionSuccess: true,
 				},
@@ -207,17 +208,17 @@ func TestEvictReplicatedByController(t *testing.T) {
 					evictionSuccess: false,
 				},
 				{
-					pod:             generatePod().WithPhase(apiv1.PodPending).Get(),
+					pod:             generatePod().WithPhase(core.PodPending).Get(),
 					canEvict:        true,
 					evictionSuccess: true,
 				},
 				{
-					pod:             generatePod().WithPhase(apiv1.PodPending).Get(),
+					pod:             generatePod().WithPhase(core.PodPending).Get(),
 					canEvict:        true,
 					evictionSuccess: true,
 				},
 				{
-					pod:             generatePod().WithPhase(apiv1.PodPending).Get(),
+					pod:             generatePod().WithPhase(core.PodPending).Get(),
 					canEvict:        true,
 					evictionSuccess: true,
 				},
@@ -226,10 +227,10 @@ func TestEvictReplicatedByController(t *testing.T) {
 	}
 
 	for tcIndex, testCase := range testCases {
-		rc.Spec = apiv1.ReplicationControllerSpec{
+		rc.Spec = core.ReplicationControllerSpec{
 			Replicas: &testCase.replicas,
 		}
-		pods := make([]*apiv1.Pod, 0, len(testCase.pods))
+		pods := make([]*core.Pod, 0, len(testCase.pods))
 		for _, p := range testCase.pods {
 			pods = append(pods, p.pod)
 		}
@@ -254,7 +255,7 @@ func TestEvictReplicatedByReplicaSet(t *testing.T) {
 	replicas := int32(5)
 	livePods := 5
 
-	rs := appsv1.ReplicaSet{
+	rs := apps.ReplicaSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rs",
 			Namespace: "default",
@@ -262,12 +263,12 @@ func TestEvictReplicatedByReplicaSet(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{
 			Kind: "ReplicaSet",
 		},
-		Spec: appsv1.ReplicaSetSpec{
+		Spec: apps.ReplicaSetSpec{
 			Replicas: &replicas,
 		},
 	}
 
-	pods := make([]*apiv1.Pod, livePods)
+	pods := make([]*core.Pod, livePods)
 	for i := range pods {
 		pods[i] = test.Pod().WithName(getTestPodName(i)).WithCreator(&rs.ObjectMeta, &rs.TypeMeta).Get()
 	}
@@ -293,7 +294,7 @@ func TestEvictReplicatedByStatefulSet(t *testing.T) {
 	replicas := int32(5)
 	livePods := 5
 
-	ss := appsv1.StatefulSet{
+	ss := apps.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ss",
 			Namespace: "default",
@@ -301,12 +302,12 @@ func TestEvictReplicatedByStatefulSet(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{
 			Kind: "StatefulSet",
 		},
-		Spec: appsv1.StatefulSetSpec{
+		Spec: apps.StatefulSetSpec{
 			Replicas: &replicas,
 		},
 	}
 
-	pods := make([]*apiv1.Pod, livePods)
+	pods := make([]*core.Pod, livePods)
 	for i := range pods {
 		pods[i] = test.Pod().WithName(getTestPodName(i)).WithCreator(&ss.ObjectMeta, &ss.TypeMeta).Get()
 	}
@@ -341,7 +342,7 @@ func TestEvictReplicatedByJob(t *testing.T) {
 
 	livePods := 5
 
-	pods := make([]*apiv1.Pod, livePods)
+	pods := make([]*core.Pod, livePods)
 	for i := range pods {
 		pods[i] = test.Pod().WithName(getTestPodName(i)).WithCreator(&job.ObjectMeta, &job.TypeMeta).Get()
 	}
@@ -367,7 +368,7 @@ func TestEvictTooFewReplicas(t *testing.T) {
 	replicas := int32(5)
 	livePods := 5
 
-	rc := apiv1.ReplicationController{
+	rc := core.ReplicationController{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rc",
 			Namespace: "default",
@@ -375,12 +376,12 @@ func TestEvictTooFewReplicas(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{
 			Kind: "ReplicationController",
 		},
-		Spec: apiv1.ReplicationControllerSpec{
+		Spec: core.ReplicationControllerSpec{
 			Replicas: &replicas,
 		},
 	}
 
-	pods := make([]*apiv1.Pod, livePods)
+	pods := make([]*core.Pod, livePods)
 	for i := range pods {
 		pods[i] = test.Pod().WithName(getTestPodName(i)).WithCreator(&rc.ObjectMeta, &rc.TypeMeta).Get()
 	}
@@ -403,7 +404,7 @@ func TestEvictionTolerance(t *testing.T) {
 	livePods := 5
 	tolerance := 0.8
 
-	rc := apiv1.ReplicationController{
+	rc := core.ReplicationController{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rc",
 			Namespace: "default",
@@ -411,12 +412,12 @@ func TestEvictionTolerance(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{
 			Kind: "ReplicationController",
 		},
-		Spec: apiv1.ReplicationControllerSpec{
+		Spec: core.ReplicationControllerSpec{
 			Replicas: &replicas,
 		},
 	}
 
-	pods := make([]*apiv1.Pod, livePods)
+	pods := make([]*core.Pod, livePods)
 	for i := range pods {
 		pods[i] = test.Pod().WithName(getTestPodName(i)).WithCreator(&rc.ObjectMeta, &rc.TypeMeta).Get()
 	}
@@ -443,7 +444,7 @@ func TestEvictAtLeastOne(t *testing.T) {
 	livePods := 5
 	tolerance := 0.1
 
-	rc := apiv1.ReplicationController{
+	rc := core.ReplicationController{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "rc",
 			Namespace: "default",
@@ -451,12 +452,12 @@ func TestEvictAtLeastOne(t *testing.T) {
 		TypeMeta: metav1.TypeMeta{
 			Kind: "ReplicationController",
 		},
-		Spec: apiv1.ReplicationControllerSpec{
+		Spec: core.ReplicationControllerSpec{
 			Replicas: &replicas,
 		},
 	}
 
-	pods := make([]*apiv1.Pod, livePods)
+	pods := make([]*core.Pod, livePods)
 	for i := range pods {
 		pods[i] = test.Pod().WithName(getTestPodName(i)).WithCreator(&rc.ObjectMeta, &rc.TypeMeta).Get()
 	}
@@ -478,15 +479,15 @@ func TestEvictAtLeastOne(t *testing.T) {
 	}
 }
 
-func getEvictionRestrictionFactory(rc *apiv1.ReplicationController, rs *appsv1.ReplicaSet,
-	ss *appsv1.StatefulSet, minReplicas int,
+func getEvictionRestrictionFactory(rc *core.ReplicationController, rs *apps.ReplicaSet,
+	ss *apps.StatefulSet, minReplicas int,
 	evictionToleranceFraction float64) (PodsEvictionRestrictionFactory, error) {
 	kubeClient := &fake.Clientset{}
-	rcInformer := coreinformer.NewReplicationControllerInformer(kubeClient, apiv1.NamespaceAll,
+	rcInformer := coreinformer.NewReplicationControllerInformer(kubeClient, core.NamespaceAll,
 		0*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
-	rsInformer := appsinformer.NewReplicaSetInformer(kubeClient, apiv1.NamespaceAll,
+	rsInformer := appsinformer.NewReplicaSetInformer(kubeClient, core.NamespaceAll,
 		0*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
-	ssInformer := appsinformer.NewStatefulSetInformer(kubeClient, apiv1.NamespaceAll,
+	ssInformer := appsinformer.NewStatefulSetInformer(kubeClient, core.NamespaceAll,
 		0*time.Second, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
 	if rc != nil {
 		err := rcInformer.GetIndexer().Add(rc)

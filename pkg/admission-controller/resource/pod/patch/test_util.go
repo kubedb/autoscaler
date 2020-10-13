@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"testing"
 
-	resource_admission "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
+	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
 
 	"github.com/stretchr/testify/assert"
 )

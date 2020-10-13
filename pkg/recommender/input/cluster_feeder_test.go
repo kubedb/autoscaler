@@ -14,32 +14,33 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+//nolint:unparam
 package input
 
 import (
 	"fmt"
 	"testing"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	controllerfetcher "kubedb.dev/autoscaler/pkg/recommender/input/controller_fetcher"
+	"kubedb.dev/autoscaler/pkg/recommender/input/spec"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
+	target_mock "kubedb.dev/autoscaler/pkg/target/mock"
+	"kubedb.dev/autoscaler/pkg/utils/test"
+
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-
-	autoscalingv1 "k8s.io/api/autoscaling/v1"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	controllerfetcher "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/input/controller_fetcher"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/input/spec"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
-	target_mock "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/target/mock"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
 )
 
 type fakeControllerFetcher struct {
-	key *controllerfetcher.ControllerKeyWithAPIVersion
+	key *controllerfetcher.ControllerKeyWithAPIGroup
 	err error
 }
 
-func (f *fakeControllerFetcher) FindTopMostWellKnownOrScalable(controller *controllerfetcher.ControllerKeyWithAPIVersion) (*controllerfetcher.ControllerKeyWithAPIVersion, error) {
+func (f *fakeControllerFetcher) FindTopMostWellKnownOrScalable(controller *controllerfetcher.ControllerKeyWithAPIGroup) (*controllerfetcher.ControllerKeyWithAPIGroup, error) {
 	return f.key, f.err
 }
 
@@ -50,21 +51,25 @@ func parseLabelSelector(selector string) labels.Selector {
 }
 
 var (
-	unsupportedConditionNoLongerSupported = "Label selector is no longer supported, please migrate to targetRef"
-	unsupportedConditionTextFromFetcher   = "Cannot read targetRef. Reason: targetRef not defined"
-	unsupportedConditionNoExtraText       = "Cannot read targetRef"
-	unsupportedConditionBothDefined       = "Both targetRef and label selector defined. Please remove label selector"
-	unsupportedConditionNoTargetRef       = "Cannot read targetRef"
-	unsupportedConditionMudaMudaMuda      = "Error checking if target is a topmost well-known or scalable controller: muda muda muda"
-	unsupportedTargetRefHasParent         = "The targetRef controller has a parent but it should point to a topmost well-known or scalable controller"
+	// unsupportedConditionNoLongerSupported = "Label selector is no longer supported, please migrate to targetRef"
+	unsupportedConditionTextFromFetcher = "Cannot read targetRef. Reason: targetRef not defined"
+	unsupportedConditionNoExtraText     = "Cannot read targetRef"
+	// unsupportedConditionBothDefined       = "Both targetRef and label selector defined. Please remove label selector"
+	unsupportedConditionNoTargetRef  = "Cannot read targetRef"
+	unsupportedConditionMudaMudaMuda = "Error checking if target is a topmost well-known or scalable controller: muda muda muda"
+	unsupportedTargetRefHasParent    = "The targetRef controller has a parent but it should point to a topmost well-known or scalable controller"
 )
 
 const (
-	kind       = "dodokind"
-	name1      = "dotaro"
-	name2      = "doseph"
-	namespace  = "testNamespace"
-	apiVersion = "stardust"
+	kind      = "dodokind"
+	name1     = "dotaro"
+	name2     = "doseph"
+	namespace = "testNamespace"
+)
+
+var (
+	apiGroup  = "stardust"
+	apiGroup2 = "taxonomy"
 )
 
 func TestLoadPods(t *testing.T) {
@@ -73,8 +78,8 @@ func TestLoadPods(t *testing.T) {
 		name                                string
 		selector                            labels.Selector
 		fetchSelectorError                  error
-		targetRef                           *autoscalingv1.CrossVersionObjectReference
-		topMostWellKnownOrScalableKey       *controllerfetcher.ControllerKeyWithAPIVersion
+		targetRef                           *core.TypedLocalObjectReference
+		topMostWellKnownOrScalableKey       *controllerfetcher.ControllerKeyWithAPIGroup
 		findTopMostWellKnownOrScalableError error
 		expectedSelector                    labels.Selector
 		expectedConfigUnsupported           *string
@@ -102,18 +107,18 @@ func TestLoadPods(t *testing.T) {
 			name:               "targetRef selector",
 			selector:           parseLabelSelector("app = test"),
 			fetchSelectorError: nil,
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       kind,
-				Name:       name1,
-				APIVersion: apiVersion,
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     kind,
+				Name:     name1,
+				APIGroup: &apiGroup,
 			},
-			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIVersion{
+			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{
 					Kind:      kind,
 					Name:      name1,
 					Namespace: namespace,
 				},
-				ApiVersion: apiVersion,
+				ApiGroup: apiGroup,
 			},
 			expectedSelector:          parseLabelSelector("app = test"),
 			expectedConfigUnsupported: nil,
@@ -132,10 +137,10 @@ func TestLoadPods(t *testing.T) {
 			selector:           nil,
 			fetchSelectorError: nil,
 			expectedSelector:   labels.Nothing(),
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       kind,
-				Name:       name1,
-				APIVersion: apiVersion,
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     kind,
+				Name:     name1,
+				APIGroup: &apiGroup,
 			},
 			expectedConfigUnsupported: &unsupportedConditionNoTargetRef,
 		},
@@ -144,18 +149,18 @@ func TestLoadPods(t *testing.T) {
 			selector:           parseLabelSelector("app = test"),
 			fetchSelectorError: nil,
 			expectedSelector:   labels.Nothing(),
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       kind,
-				Name:       name1,
-				APIVersion: apiVersion,
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     kind,
+				Name:     name1,
+				APIGroup: &apiGroup,
 			},
-			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIVersion{
+			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{
 					Kind:      kind,
 					Name:      name2,
 					Namespace: namespace,
 				},
-				ApiVersion: apiVersion,
+				ApiGroup: apiGroup,
 			},
 			expectedConfigUnsupported: &unsupportedTargetRefHasParent,
 		},
@@ -164,10 +169,10 @@ func TestLoadPods(t *testing.T) {
 			selector:           parseLabelSelector("app = test"),
 			fetchSelectorError: nil,
 			expectedSelector:   labels.Nothing(),
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       "doestar",
-				Name:       "doseph-doestar",
-				APIVersion: "taxonomy",
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     "doestar",
+				Name:     "doseph-doestar",
+				APIGroup: &apiGroup2,
 			},
 			expectedConfigUnsupported:           &unsupportedConditionMudaMudaMuda,
 			findTopMostWellKnownOrScalableError: fmt.Errorf("muda muda muda"),
@@ -177,18 +182,18 @@ func TestLoadPods(t *testing.T) {
 			selector:           parseLabelSelector("app = test"),
 			fetchSelectorError: nil,
 			expectedSelector:   parseLabelSelector("app = test"),
-			targetRef: &autoscalingv1.CrossVersionObjectReference{
-				Kind:       kind,
-				Name:       name1,
-				APIVersion: apiVersion,
+			targetRef: &core.TypedLocalObjectReference{
+				Kind:     kind,
+				Name:     name1,
+				APIGroup: &apiGroup,
 			},
-			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIVersion{
+			topMostWellKnownOrScalableKey: &controllerfetcher.ControllerKeyWithAPIGroup{
 				ControllerKey: controllerfetcher.ControllerKey{
 					Kind:      kind,
 					Name:      name1,
 					Namespace: namespace,
 				},
-				ApiVersion: apiVersion,
+				ApiGroup: apiGroup,
 			},
 			expectedConfigUnsupported: nil,
 		},
@@ -200,9 +205,9 @@ func TestLoadPods(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			vpa := test.VerticalPodAutoscaler().WithName("testVpa").WithContainer("container").WithNamespace("testNamespace").WithTargetRef(tc.targetRef).Get()
-			vpaLister := &test.VerticalPodAutoscalerListerMock{}
-			vpaLister.On("List").Return([]*vpa_types.VerticalPodAutoscaler{vpa}, nil)
+			vpa := test.VerticalAutoscaler().WithName("testVpa").WithContainer("container").WithNamespace("testNamespace").WithTargetRef(tc.targetRef).Get()
+			vpaLister := &test.VerticalAutoscalerListerMock{}
+			vpaLister.On("List").Return([]*vpa_types.VerticalAutoscaler{vpa}, nil)
 
 			targetSelectorFetcher := target_mock.NewMockVpaTargetSelectorFetcher(ctrl)
 

@@ -22,19 +22,18 @@ import (
 	"strings"
 	"time"
 
-	autoscaling "k8s.io/api/autoscaling/v1"
-	apiv1 "k8s.io/api/core/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_clientset "kubedb.dev/apimachinery/client/clientset/versioned"
+
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_clientset "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/clientset/versioned"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 	"k8s.io/kubernetes/test/e2e/framework"
-
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
 )
 
 type resourceRecommendation struct {
@@ -50,8 +49,8 @@ func (r *resourceRecommendation) sub(other *resourceRecommendation) resourceReco
 
 }
 
-func getResourceRecommendation(containerRecommendation *vpa_types.RecommendedContainerResources, r apiv1.ResourceName) resourceRecommendation {
-	getOrZero := func(resourceList apiv1.ResourceList) int64 {
+func getResourceRecommendation(containerRecommendation *vpa_types.RecommendedContainerResources, r core.ResourceName) resourceRecommendation {
+	getOrZero := func(resourceList core.ResourceList) int64 {
 		value, found := resourceList[r]
 		if found {
 			return value.Value()
@@ -78,18 +77,18 @@ func (*observer) OnAdd(obj interface{})    {}
 func (*observer) OnDelete(obj interface{}) {}
 
 func (o *observer) OnUpdate(oldObj, newObj interface{}) {
-	get := func(vpa *vpa_types.VerticalPodAutoscaler) (result resourceRecommendation, found bool) {
+	get := func(vpa *vpa_types.VerticalAutoscaler) (result resourceRecommendation, found bool) {
 		if vpa.Status.Recommendation == nil || len(vpa.Status.Recommendation.ContainerRecommendations) == 0 {
 			found = false
 			result = resourceRecommendation{}
 		} else {
 			found = true
-			result = getResourceRecommendation(&vpa.Status.Recommendation.ContainerRecommendations[0], apiv1.ResourceCPU)
+			result = getResourceRecommendation(&vpa.Status.Recommendation.ContainerRecommendations[0], core.ResourceCPU)
 		}
 		return
 	}
-	oldVPA, _ := oldObj.(*vpa_types.VerticalPodAutoscaler)
-	NewVPA, _ := newObj.(*vpa_types.VerticalPodAutoscaler)
+	oldVPA, _ := oldObj.(*vpa_types.VerticalAutoscaler)
+	NewVPA, _ := newObj.(*vpa_types.VerticalAutoscaler)
 	oldRecommendation, oldFound := get(oldVPA)
 	newRecommendation, newFound := get(NewVPA)
 	result := recommendationChange{
@@ -101,10 +100,10 @@ func (o *observer) OnUpdate(oldObj, newObj interface{}) {
 }
 
 func getVpaObserver(vpaClientSet vpa_clientset.Interface) *observer {
-	vpaListWatch := cache.NewListWatchFromClient(vpaClientSet.AutoscalingV1().RESTClient(), "verticalpodautoscalers", apiv1.NamespaceAll, fields.Everything())
+	vpaListWatch := cache.NewListWatchFromClient(vpaClientSet.AutoscalingV1alpha1().RESTClient(), "verticalautoscalers", core.NamespaceAll, fields.Everything())
 	vpaObserver := observer{channel: make(chan recommendationChange)}
 	_, controller := cache.NewIndexerInformer(vpaListWatch,
-		&vpa_types.VerticalPodAutoscaler{},
+		&vpa_types.VerticalAutoscaler{},
 		1*time.Hour,
 		&vpaObserver,
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
@@ -124,22 +123,22 @@ var _ = RecommenderE2eDescribe("Checkpoints", func() {
 		ns := f.Namespace.Name
 		vpaClientSet := getVpaClientSet(f)
 
-		checkpoint := vpa_types.VerticalPodAutoscalerCheckpoint{
+		checkpoint := vpa_types.VerticalAutoscalerCheckpoint{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test",
 				Namespace: ns,
 			},
-			Spec: vpa_types.VerticalPodAutoscalerCheckpointSpec{
+			Spec: vpa_types.VerticalAutoscalerCheckpointSpec{
 				VPAObjectName: "some-vpa",
 			},
 		}
 
-		_, err := vpaClientSet.AutoscalingV1().VerticalPodAutoscalerCheckpoints(ns).Create(context.TODO(), &checkpoint, metav1.CreateOptions{})
+		_, err := vpaClientSet.AutoscalingV1alpha1().VerticalAutoscalerCheckpoints(ns).Create(context.TODO(), &checkpoint, metav1.CreateOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
 		time.Sleep(15 * time.Minute)
 
-		list, err := vpaClientSet.AutoscalingV1().VerticalPodAutoscalerCheckpoints(ns).List(context.TODO(), metav1.ListOptions{})
+		list, err := vpaClientSet.AutoscalingV1alpha1().VerticalAutoscalerCheckpoints(ns).List(context.TODO(), metav1.ListOptions{})
 		gomega.Expect(err).NotTo(gomega.HaveOccurred())
 		gomega.Expect(list.Items).To(gomega.BeEmpty())
 	})
@@ -155,10 +154,10 @@ var _ = RecommenderE2eDescribe("VPA CRD object", func() {
 		vpaClientSet := getVpaClientSet(f)
 
 		ginkgo.By("Setting up VPA")
-		vpaCRD := NewVPA(f, "hamster-cronjob-vpa", &autoscaling.CrossVersionObjectReference{
-			APIVersion: "batch/v1",
-			Kind:       "CronJob",
-			Name:       "hamster-cronjob",
+		vpaCRD := NewVPA(f, "hamster-cronjob-vpa", &core.TypedLocalObjectReference{
+			APIGroup: &batchGroup,
+			Kind:     "CronJob",
+			Name:     "hamster-cronjob",
 		})
 
 		InstallVPA(f, vpaCRD)
@@ -173,7 +172,7 @@ var _ = RecommenderE2eDescribe("VPA CRD object", func() {
 	f := framework.NewDefaultFramework("vertical-pod-autoscaling")
 
 	var (
-		vpaCRD       *vpa_types.VerticalPodAutoscaler
+		vpaCRD       *vpa_types.VerticalAutoscaler
 		vpaClientSet vpa_clientset.Interface
 	)
 
@@ -261,8 +260,8 @@ var _ = RecommenderE2eDescribe("VPA CRD object", func() {
 	ginkgo.It("respects min allowed recommendation", func() {
 		const minMilliCpu = 10000
 		ginkgo.By("Setting up a VPA CRD")
-		minAllowed := apiv1.ResourceList{
-			apiv1.ResourceCPU: ParseQuantityOrDie(fmt.Sprintf("%dm", minMilliCpu)),
+		minAllowed := core.ResourceList{
+			core.ResourceCPU: ParseQuantityOrDie(fmt.Sprintf("%dm", minMilliCpu)),
 		}
 		vpaCRD := createVpaCRDWithMinMaxAllowed(f, minAllowed, nil)
 
@@ -281,8 +280,8 @@ var _ = RecommenderE2eDescribe("VPA CRD object", func() {
 	ginkgo.It("respects max allowed recommendation", func() {
 		const maxMilliCpu = 1
 		ginkgo.By("Setting up a VPA CRD")
-		maxAllowed := apiv1.ResourceList{
-			apiv1.ResourceCPU: ParseQuantityOrDie(fmt.Sprintf("%dm", maxMilliCpu)),
+		maxAllowed := core.ResourceList{
+			core.ResourceCPU: ParseQuantityOrDie(fmt.Sprintf("%dm", maxMilliCpu)),
 		}
 		vpaCRD := createVpaCRDWithMinMaxAllowed(f, nil, maxAllowed)
 
@@ -297,13 +296,13 @@ var _ = RecommenderE2eDescribe("VPA CRD object", func() {
 	})
 })
 
-func getMilliCpu(resources apiv1.ResourceList) int64 {
-	cpu := resources[apiv1.ResourceCPU]
+func getMilliCpu(resources core.ResourceList) int64 {
+	cpu := resources[core.ResourceCPU]
 	return cpu.MilliValue()
 }
 
 // createVpaCRDWithMinMaxAllowed creates vpa object with min and max resources allowed.
-func createVpaCRDWithMinMaxAllowed(f *framework.Framework, minAllowed, maxAllowed apiv1.ResourceList) *vpa_types.VerticalPodAutoscaler {
+func createVpaCRDWithMinMaxAllowed(f *framework.Framework, minAllowed, maxAllowed core.ResourceList) *vpa_types.VerticalAutoscaler {
 	vpaCRD := NewVPA(f, "hamster-vpa", hamsterTargetRef)
 	containerResourcePolicies := []vpa_types.ContainerResourcePolicy{
 		{
@@ -360,7 +359,7 @@ var _ = RecommenderE2eDescribe("VPA CRD object", func() {
 
 // createVpaCRDWithContainerScalingModes creates vpa object with containers policies
 // having assigned given scaling modes respectively.
-func createVpaCRDWithContainerScalingModes(f *framework.Framework, modes ...vpa_types.ContainerScalingMode) *vpa_types.VerticalPodAutoscaler {
+func createVpaCRDWithContainerScalingModes(f *framework.Framework, modes ...vpa_types.ContainerScalingMode) *vpa_types.VerticalAutoscaler {
 	vpaCRD := NewVPA(f, "hamster-vpa", hamsterTargetRef)
 	containerResourcePolicies := make([]vpa_types.ContainerResourcePolicy, len(modes), len(modes))
 	for i := range modes {

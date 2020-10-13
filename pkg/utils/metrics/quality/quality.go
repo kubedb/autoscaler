@@ -21,13 +21,13 @@ import (
 	"math"
 	"strconv"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics"
-	"k8s.io/klog"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/utils/metrics"
 
 	"github.com/prometheus/client_golang/prometheus"
+	core "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	"k8s.io/klog"
 )
 
 const (
@@ -133,24 +133,24 @@ func Register() {
 
 // observeUsageRecommendationRelativeDiff records relative diff between usage and
 // recommendation if recommendation has a positive value.
-func observeUsageRecommendationRelativeDiff(usage, recommendation float64, isOOM bool, resource corev1.ResourceName, updateMode *vpa_types.UpdateMode) {
+func observeUsageRecommendationRelativeDiff(usage, recommendation float64, isOOM bool, resource core.ResourceName, updateMode *vpa_types.UpdateMode) {
 	if recommendation > 0 {
 		usageRecommendationRelativeDiff.WithLabelValues(updateModeToString(updateMode), string(resource), strconv.FormatBool(isOOM)).Observe((usage - recommendation) / recommendation)
 	}
 }
 
 // observeMissingRecommendation counts usage samples with missing recommendations.
-func observeMissingRecommendation(isOOM bool, resource corev1.ResourceName, updateMode *vpa_types.UpdateMode) {
+func observeMissingRecommendation(isOOM bool, resource core.ResourceName, updateMode *vpa_types.UpdateMode) {
 	usageMissingRecommendationCounter.WithLabelValues(updateModeToString(updateMode), string(resource), strconv.FormatBool(isOOM)).Inc()
 }
 
 // observeUsageRecommendationDiff records absolute diff between usage and
 // recommendation.
-func observeUsageRecommendationDiff(usage, recommendation float64, isRecommendationMissing, isOOM bool, resource corev1.ResourceName, updateMode *vpa_types.UpdateMode) {
+func observeUsageRecommendationDiff(usage, recommendation float64, isRecommendationMissing, isOOM bool, resource core.ResourceName, updateMode *vpa_types.UpdateMode) {
 	recommendationOverUsage := recommendation > usage
 	diff := math.Abs(usage - recommendation)
 	switch resource {
-	case corev1.ResourceCPU:
+	case core.ResourceCPU:
 		if recommendationOverUsage {
 			cpuRecommendationOverUsageDiff.WithLabelValues(updateModeToString(updateMode),
 				strconv.FormatBool(isRecommendationMissing)).Observe(diff)
@@ -158,7 +158,7 @@ func observeUsageRecommendationDiff(usage, recommendation float64, isRecommendat
 			cpuRecommendationLowerOrEqualUsageDiff.WithLabelValues(updateModeToString(updateMode),
 				strconv.FormatBool(isRecommendationMissing)).Observe(diff)
 		}
-	case corev1.ResourceMemory:
+	case core.ResourceMemory:
 		if recommendationOverUsage {
 			memoryRecommendationOverUsageDiff.WithLabelValues(updateModeToString(updateMode),
 				strconv.FormatBool(isRecommendationMissing), strconv.FormatBool(isOOM)).Observe(diff)
@@ -172,11 +172,11 @@ func observeUsageRecommendationDiff(usage, recommendation float64, isRecommendat
 }
 
 // observeRecommendation records the value of recommendation.
-func observeRecommendation(recommendation float64, isOOM bool, resource corev1.ResourceName, updateMode *vpa_types.UpdateMode) {
+func observeRecommendation(recommendation float64, isOOM bool, resource core.ResourceName, updateMode *vpa_types.UpdateMode) {
 	switch resource {
-	case corev1.ResourceCPU:
+	case core.ResourceCPU:
 		cpuRecommendations.WithLabelValues(updateModeToString(updateMode)).Observe(recommendation)
-	case corev1.ResourceMemory:
+	case core.ResourceMemory:
 		memoryRecommendations.WithLabelValues(updateModeToString(updateMode), strconv.FormatBool(isOOM)).Observe(recommendation)
 	default:
 		klog.Warningf("Unknown resource: %v", resource)
@@ -184,20 +184,20 @@ func observeRecommendation(recommendation float64, isOOM bool, resource corev1.R
 }
 
 // ObserveQualityMetrics records all quality metrics that we can derive from recommendation and usage.
-func ObserveQualityMetrics(usage, recommendation float64, isOOM bool, resource corev1.ResourceName, updateMode *vpa_types.UpdateMode) {
+func ObserveQualityMetrics(usage, recommendation float64, isOOM bool, resource core.ResourceName, updateMode *vpa_types.UpdateMode) {
 	observeRecommendation(recommendation, isOOM, resource, updateMode)
 	observeUsageRecommendationDiff(usage, recommendation, false, isOOM, resource, updateMode)
 	observeUsageRecommendationRelativeDiff(usage, recommendation, isOOM, resource, updateMode)
 }
 
 // ObserveQualityMetricsRecommendationMissing records all quality metrics that we can derive from usage when recommendation is missing.
-func ObserveQualityMetricsRecommendationMissing(usage float64, isOOM bool, resource corev1.ResourceName, updateMode *vpa_types.UpdateMode) {
+func ObserveQualityMetricsRecommendationMissing(usage float64, isOOM bool, resource core.ResourceName, updateMode *vpa_types.UpdateMode) {
 	observeMissingRecommendation(isOOM, resource, updateMode)
 	observeUsageRecommendationDiff(usage, 0, true, isOOM, resource, updateMode)
 }
 
 // ObserveRecommendationChange records relative_recommendation_changes metric.
-func ObserveRecommendationChange(previous, current corev1.ResourceList, updateMode *vpa_types.UpdateMode, vpaSize int) {
+func ObserveRecommendationChange(previous, current core.ResourceList, updateMode *vpa_types.UpdateMode, vpaSize int) {
 	// This will happen if there is no previous recommendation, we don't want to emit anything then.
 	if previous == nil {
 		return
@@ -223,11 +223,11 @@ func ObserveRecommendationChange(previous, current corev1.ResourceList, updateMo
 }
 
 // quantityAsFloat converts resource.Quantity to a float64 value, in some scale (constant per resource but unspecified)
-func quantityAsFloat(resource corev1.ResourceName, quantity resource.Quantity) float64 {
+func quantityAsFloat(resource core.ResourceName, quantity resource.Quantity) float64 {
 	switch resource {
-	case corev1.ResourceCPU:
+	case core.ResourceCPU:
 		return float64(quantity.MilliValue())
-	case corev1.ResourceMemory:
+	case core.ResourceMemory:
 		return float64(quantity.Value())
 	default:
 		klog.Warningf("Unknown resource: %v", resource)

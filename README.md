@@ -37,7 +37,7 @@ time.
 
 Autoscaling is configured with a
 [Custom Resource Definition object](https://kubernetes.io/docs/concepts/api-extension/custom-resources/)
-called [VerticalPodAutoscaler](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go).
+called [VerticalAutoscaler](https://github.com/kubedb/apimachinery/blob/master/apis/autoscaling/v1alpha1/verticalautoscaler_types.go).
 It allows to specify which pods should be vertically autoscaled as well as if/how the
 resource recommendations are applied.
 
@@ -58,7 +58,7 @@ The current default version is Vertical Pod Autoscaler 0.8.0
 
 ### Notice on removal of v1beta1 version (>=0.5.0)
 
-**NOTE:** In 0.5.0 we disabled the old version of the API - `autoscaling.k8s.io/v1beta1`.
+**NOTE:** In 0.5.0 we disabled the old version of the API - `autoscaling.kubedb.com/v1beta1`.
 The VPA objects in this version will no longer receive recommendations and
 existing recommendations will be removed. The objects will remain present though
 and a ConfigUnsupported condition will be set on them.
@@ -165,8 +165,8 @@ You may need to add more nodes or adjust examples/hamster.yaml to use less CPU.*
 ### Example VPA configuration
 
 ```
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
+apiVersion: autoscaling.kubedb.com/v1alpha1
+kind: VerticalAutoscaler
 metadata:
   name: my-app-vpa
 spec:
@@ -197,7 +197,7 @@ kubectl --namespace=kube-system logs [pod name]| grep -e '^E[0-9]\{4\}'
 
 * Check that the VPA Custom Resource Definition was created:
 ```
-kubectl get customresourcedefinition|grep verticalpodautoscalers
+kubectl get customresourcedefinition|grep verticalautoscalers
 ```
 
 ### Components of VPA
@@ -235,7 +235,7 @@ kubectl delete clusterrolebinding myname-cluster-admin-binding
 # Limits control
 
 When setting limits VPA will conform to
-[resource policies](https://github.com/kubernetes/autoscaler/blob/master/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1/types.go#L82).
+[resource policies](https://github.com/kubedb/apimachinery/blob/master/apis/autoscaling/v1alpha1/verticalautoscaler_types.go#L87).
 It will maintain limit to request ratio specified for all containers.
 
 VPA will try to cap recommendations between min and max of
@@ -290,7 +290,5 @@ VPA will set RAM request to 2 GB (following the resource policy) and RAM limit t
 # Related links
 
 * [FAQ](FAQ.md)
-* [Design
-  proposal](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/autoscaling/vertical-pod-autoscaler.md)
-* [API
-  definition](pkg/apis/autoscaling.k8s.io/v1/types.go)
+* [Design proposal](https://github.com/kubernetes/community/blob/master/contributors/design-proposals/autoscaling/vertical-pod-autoscaler.md)
+* [API definition](https://github.com/kubedb/apimachinery/blob/master/apis/autoscaling/v1alpha1/verticalautoscaler_types.go)

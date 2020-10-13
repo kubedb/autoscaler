@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"strings"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
+	"kubedb.dev/autoscaler/pkg/admission-controller/resource/pod/recommendation"
+	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	resource_admission "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource/pod/recommendation"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_api_util "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
 )
 
 const (
@@ -46,7 +47,7 @@ func NewResourceUpdatesCalculator(recommendationProvider recommendation.Provider
 	}
 }
 
-func (c *resourcesUpdatesPatchCalculator) CalculatePatches(pod *core.Pod, vpa *vpa_types.VerticalPodAutoscaler) ([]resource_admission.PatchRecord, error) {
+func (c *resourcesUpdatesPatchCalculator) CalculatePatches(pod *core.Pod, vpa *vpa_types.VerticalAutoscaler) ([]resource_admission.PatchRecord, error) {
 	result := []resource_admission.PatchRecord{}
 
 	containersResources, annotationsPerContainer, err := c.recommendationProvider.GetContainersResourcesForPod(pod, vpa)

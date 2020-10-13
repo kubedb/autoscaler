@@ -19,10 +19,11 @@ package api
 import (
 	"testing"
 
-	"k8s.io/api/core/v1"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
 
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 type fakeProcessor struct {
@@ -31,8 +32,8 @@ type fakeProcessor struct {
 
 func (p *fakeProcessor) Apply(podRecommendation *vpa_types.RecommendedPodResources,
 	policy *vpa_types.PodResourcePolicy,
-	conditions []vpa_types.VerticalPodAutoscalerCondition,
-	pod *v1.Pod) (*vpa_types.RecommendedPodResources, ContainerToAnnotationsMap, error) {
+	conditions []kmapi.Condition,
+	pod *core.Pod) (*vpa_types.RecommendedPodResources, ContainerToAnnotationsMap, error) {
 	result := podRecommendation.DeepCopy()
 	result.ContainerRecommendations[0].ContainerName += p.message
 	containerToAnnotationsMap := ContainerToAnnotationsMap{"trace": []string{p.message}}

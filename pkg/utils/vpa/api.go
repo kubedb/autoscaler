@@ -23,23 +23,24 @@ import (
 	"strings"
 	"time"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_clientset "kubedb.dev/apimachinery/client/clientset/versioned"
+	vpa_api "kubedb.dev/apimachinery/client/clientset/versioned/typed/autoscaling/v1alpha1"
+	vpa_lister "kubedb.dev/apimachinery/client/listers/autoscaling/v1alpha1"
+
 	core "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
-	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_clientset "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/clientset/versioned"
-	vpa_api "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/clientset/versioned/typed/autoscaling.k8s.io/v1"
-	vpa_lister "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/listers/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 )
 
 // VpaWithSelector is a pair of VPA and its selector.
 type VpaWithSelector struct {
-	Vpa      *vpa_types.VerticalPodAutoscaler
+	Vpa      *vpa_types.VerticalAutoscaler
 	Selector labels.Selector
 }
 
@@ -49,21 +50,21 @@ type patchRecord struct {
 	Value interface{} `json:"value"`
 }
 
-func patchVpa(vpaClient vpa_api.VerticalPodAutoscalerInterface, vpaName string, patches []patchRecord) (result *vpa_types.VerticalPodAutoscaler, err error) {
+func patchVpa(vpaClient vpa_api.VerticalAutoscalerInterface, vpaName string, patches []patchRecord) (result *vpa_types.VerticalAutoscaler, err error) {
 	bytes, err := json.Marshal(patches)
 	if err != nil {
 		klog.Errorf("Cannot marshal VPA status patches %+v. Reason: %+v", patches, err)
 		return
 	}
 
-	return vpaClient.Patch(context.TODO(), vpaName, types.JSONPatchType, bytes, meta.PatchOptions{})
+	return vpaClient.Patch(context.TODO(), vpaName, types.JSONPatchType, bytes, metav1.PatchOptions{})
 }
 
 // UpdateVpaStatusIfNeeded updates the status field of the VPA API object.
 // It prevents race conditions by verifying that the lastUpdateTime of the
 // API object and its model representation are equal.
-func UpdateVpaStatusIfNeeded(vpaClient vpa_api.VerticalPodAutoscalerInterface, vpaName string, newStatus,
-	oldStatus *vpa_types.VerticalPodAutoscalerStatus) (result *vpa_types.VerticalPodAutoscaler, err error) {
+func UpdateVpaStatusIfNeeded(vpaClient vpa_api.VerticalAutoscalerInterface, vpaName string, newStatus,
+	oldStatus *vpa_types.VerticalAutoscalerStatus) (result *vpa_types.VerticalAutoscaler, err error) {
 	patches := []patchRecord{{
 		Op:    "add",
 		Path:  "/status",
@@ -76,17 +77,17 @@ func UpdateVpaStatusIfNeeded(vpaClient vpa_api.VerticalPodAutoscalerInterface, v
 	return nil, nil
 }
 
-// NewVpasLister returns VerticalPodAutoscalerLister configured to fetch all VPA objects from namespace,
+// NewVpasLister returns VerticalAutoscalerLister configured to fetch all VPA objects from namespace,
 // set namespace to k8sapiv1.NamespaceAll to select all namespaces.
 // The method blocks until vpaLister is initially populated.
-func NewVpasLister(vpaClient *vpa_clientset.Clientset, stopChannel <-chan struct{}, namespace string) vpa_lister.VerticalPodAutoscalerLister {
-	vpaListWatch := cache.NewListWatchFromClient(vpaClient.AutoscalingV1().RESTClient(), "verticalpodautoscalers", namespace, fields.Everything())
+func NewVpasLister(vpaClient *vpa_clientset.Clientset, stopChannel <-chan struct{}, namespace string) vpa_lister.VerticalAutoscalerLister {
+	vpaListWatch := cache.NewListWatchFromClient(vpaClient.AutoscalingV1alpha1().RESTClient(), "verticalautoscalers", namespace, fields.Everything())
 	indexer, controller := cache.NewIndexerInformer(vpaListWatch,
-		&vpa_types.VerticalPodAutoscaler{},
+		&vpa_types.VerticalAutoscaler{},
 		1*time.Hour,
 		&cache.ResourceEventHandlerFuncs{},
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc})
-	vpaLister := vpa_lister.NewVerticalPodAutoscalerLister(indexer)
+	vpaLister := vpa_lister.NewVerticalAutoscalerLister(indexer)
 	go controller.Run(stopChannel)
 	if !cache.WaitForCacheSync(make(chan struct{}), controller.HasSynced) {
 		klog.Fatalf("Failed to sync VPA cache during initialization")
@@ -110,13 +111,13 @@ func PodLabelsMatchVPA(podNamespace string, labels labels.Set, vpaNamespace stri
 }
 
 // stronger returns true iff a is before b in the order to control a Pod (that matches both VPAs).
-func stronger(a, b *vpa_types.VerticalPodAutoscaler) bool {
+func stronger(a, b *vpa_types.VerticalAutoscaler) bool {
 	// Assume a is not nil and each valid object is before nil object.
 	if b == nil {
 		return true
 	}
 	// Compare creation timestamps of the VPA objects. This is the clue of the stronger logic.
-	var aTime, bTime meta.Time
+	var aTime, bTime metav1.Time
 	aTime = a.GetCreationTimestamp()
 	bTime = b.GetCreationTimestamp()
 	if !aTime.Equal(&bTime) {
@@ -129,7 +130,7 @@ func stronger(a, b *vpa_types.VerticalPodAutoscaler) bool {
 // GetControllingVPAForPod chooses the earliest created VPA from the input list that matches the given Pod.
 func GetControllingVPAForPod(pod *core.Pod, vpas []*VpaWithSelector) *VpaWithSelector {
 	var controlling *VpaWithSelector
-	var controllingVpa *vpa_types.VerticalPodAutoscaler
+	var controllingVpa *vpa_types.VerticalAutoscaler
 	// Choose the strongest VPA from the ones that match this Pod.
 	for _, vpaWithSelector := range vpas {
 		if PodMatchesVPA(pod, vpaWithSelector) && stronger(vpaWithSelector.Vpa, controllingVpa) {
@@ -142,7 +143,7 @@ func GetControllingVPAForPod(pod *core.Pod, vpas []*VpaWithSelector) *VpaWithSel
 
 // GetUpdateMode returns the updatePolicy.updateMode for a given VPA.
 // If the mode is not specified it returns the default (UpdateModeAuto).
-func GetUpdateMode(vpa *vpa_types.VerticalPodAutoscaler) vpa_types.UpdateMode {
+func GetUpdateMode(vpa *vpa_types.VerticalAutoscaler) vpa_types.UpdateMode {
 	if vpa.Spec.UpdatePolicy == nil || vpa.Spec.UpdatePolicy.UpdateMode == nil || *vpa.Spec.UpdatePolicy.UpdateMode == "" {
 		return vpa_types.UpdateModeAuto
 	}
@@ -177,8 +178,8 @@ func GetContainerControlledValues(name string, vpaResourcePolicy *vpa_types.PodR
 
 // CreateOrUpdateVpaCheckpoint updates the status field of the VPA Checkpoint API object.
 // If object doesn't exits it is created.
-func CreateOrUpdateVpaCheckpoint(vpaCheckpointClient vpa_api.VerticalPodAutoscalerCheckpointInterface,
-	vpaCheckpoint *vpa_types.VerticalPodAutoscalerCheckpoint) error {
+func CreateOrUpdateVpaCheckpoint(vpaCheckpointClient vpa_api.VerticalAutoscalerCheckpointInterface,
+	vpaCheckpoint *vpa_types.VerticalAutoscalerCheckpoint) error {
 	patches := make([]patchRecord, 0)
 	patches = append(patches, patchRecord{
 		Op:    "replace",
@@ -189,9 +190,9 @@ func CreateOrUpdateVpaCheckpoint(vpaCheckpointClient vpa_api.VerticalPodAutoscal
 	if err != nil {
 		return fmt.Errorf("Cannot marshal VPA checkpoint status patches %+v. Reason: %+v", patches, err)
 	}
-	_, err = vpaCheckpointClient.Patch(context.TODO(), vpaCheckpoint.ObjectMeta.Name, types.JSONPatchType, bytes, meta.PatchOptions{})
+	_, err = vpaCheckpointClient.Patch(context.TODO(), vpaCheckpoint.ObjectMeta.Name, types.JSONPatchType, bytes, metav1.PatchOptions{})
 	if err != nil && strings.Contains(err.Error(), fmt.Sprintf("\"%s\" not found", vpaCheckpoint.ObjectMeta.Name)) {
-		_, err = vpaCheckpointClient.Create(context.TODO(), vpaCheckpoint, meta.CreateOptions{})
+		_, err = vpaCheckpointClient.Create(context.TODO(), vpaCheckpoint, metav1.CreateOptions{})
 	}
 	if err != nil {
 		return fmt.Errorf("Cannot save checkpoint for vpa %v container %v. Reason: %+v", vpaCheckpoint.ObjectMeta.Name, vpaCheckpoint.Spec.ContainerName, err)

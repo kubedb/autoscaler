@@ -23,13 +23,12 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/klog"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
 
 	promapi "github.com/prometheus/client_golang/api"
 	prometheusv1 "github.com/prometheus/client_golang/api/prometheus/v1"
 	prommodel "github.com/prometheus/common/model"
-
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
+	"k8s.io/klog"
 )
 
 // PrometheusHistoryProviderConfig allow to select which metrics
@@ -289,6 +288,9 @@ func (p *prometheusHistoryProvider) GetClusterHistory() (map[model.PodID]*PodHis
 			sort.Slice(samples, func(i, j int) bool { return samples[i].MeasureStart.Before(samples[j].MeasureStart) })
 		}
 	}
-	p.readLastLabels(res, p.config.PodLabelsMetricName)
+	err = p.readLastLabels(res, p.config.PodLabelsMetricName)
+	if err != nil {
+		return nil, err
+	}
 	return res, nil
 }

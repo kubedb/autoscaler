@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package admissioncontroller
 
 import (
 	"context"
@@ -45,7 +45,7 @@ func getClient() *kubernetes.Clientset {
 	return clientset
 }
 
-func configTLS(clientset *kubernetes.Clientset, serverCert, serverKey []byte) *tls.Config {
+func configTLS(serverCert, serverKey []byte) *tls.Config {
 	sCert, err := tls.X509KeyPair(serverCert, serverKey)
 	if err != nil {
 		klog.Fatal(err)
@@ -98,9 +98,9 @@ func selfRegistration(clientset *kubernetes.Clientset, caCert []byte, namespace,
 					{
 						Operations: []admissionregistration.OperationType{admissionregistration.Create, admissionregistration.Update},
 						Rule: admissionregistration.Rule{
-							APIGroups:   []string{"autoscaling.k8s.io"},
+							APIGroups:   []string{"autoscaling.kubedb.com"},
 							APIVersions: []string{"*"},
-							Resources:   []string{"verticalpodautoscalers"},
+							Resources:   []string{"verticalautoscalers"},
 						},
 					},
 				},

@@ -20,19 +20,21 @@ import (
 	"testing"
 	"time"
 
+	"kubedb.dev/autoscaler/pkg/recommender/model"
+
 	"github.com/stretchr/testify/assert"
-	"k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 )
 
 var scheme = runtime.NewScheme()
 var codecs = serializer.NewCodecFactory(scheme)
 
 func init() {
-	v1.AddToScheme(scheme)
+	utilruntime.Must(core.AddToScheme(scheme))
 }
 
 const pod1Yaml = `
@@ -75,22 +77,22 @@ status:
         reason: OOMKilled
 `
 
-func newPod(yaml string) (*v1.Pod, error) {
+func newPod(yaml string) (*core.Pod, error) {
 	decode := codecs.UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(yaml), nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return obj.(*v1.Pod), nil
+	return obj.(*core.Pod), nil
 }
 
-func newEvent(yaml string) (*v1.Event, error) {
+func newEvent(yaml string) (*core.Event, error) {
 	decode := codecs.UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(yaml), nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return obj.(*v1.Event), nil
+	return obj.(*core.Event), nil
 }
 
 func TestOOMReceived(t *testing.T) {
@@ -128,7 +130,7 @@ func TestMalformedPodReceived(t *testing.T) {
 }
 
 func TestParseEvictionEvent(t *testing.T) {
-	parseTimestamp := func(str string) time.Time {
+	parseTimestamp := func(_ string) time.Time {
 		timestamp, err := time.Parse(time.RFC3339, "2018-02-23T13:38:48Z")
 		assert.NoError(t, err)
 		return timestamp.UTC()

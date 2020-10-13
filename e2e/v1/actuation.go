@@ -21,18 +21,20 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
-	autoscaling "k8s.io/api/autoscaling/v1"
-	apiv1 "k8s.io/api/core/v1"
-	policyv1beta1 "k8s.io/api/policy/v1beta1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/e2e/utils"
+	"kubedb.dev/autoscaler/pkg/utils/annotations"
+
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega"
+	apps "k8s.io/api/apps/v1"
+	core "k8s.io/api/core/v1"
+	policy "k8s.io/api/policy/v1beta1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/wait"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/e2e/utils"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/annotations"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/test/e2e/framework"
 	framework_deployment "k8s.io/kubernetes/test/e2e/framework/deployment"
@@ -41,9 +43,6 @@ import (
 	framework_rs "k8s.io/kubernetes/test/e2e/framework/replicaset"
 	framework_ss "k8s.io/kubernetes/test/e2e/framework/statefulset"
 	testutils "k8s.io/kubernetes/test/utils"
-
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/gomega"
 )
 
 var _ = ActuationSuiteE2eDescribe("Actuation", func() {
@@ -116,50 +115,51 @@ var _ = ActuationSuiteE2eDescribe("Actuation", func() {
 	})
 
 	ginkgo.It("evicts pods in a Deployment", func() {
-		testEvictsPods(f, &autoscaling.CrossVersionObjectReference{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-			Name:       "hamster-deployment",
+		testEvictsPods(f, &core.TypedLocalObjectReference{
+			APIGroup: &appsGroup,
+			Kind:     "Deployment",
+			Name:     "hamster-deployment",
 		})
 	})
 
 	ginkgo.It("evicts pods in a Replication Controller", func() {
-		testEvictsPods(f, &autoscaling.CrossVersionObjectReference{
-			APIVersion: "v1",
-			Kind:       "ReplicationController",
-			Name:       "hamster-rc",
+
+		testEvictsPods(f, &core.TypedLocalObjectReference{
+			APIGroup: &core.SchemeGroupVersion.Group,
+			Kind:     "ReplicationController",
+			Name:     "hamster-rc",
 		})
 	})
 
 	ginkgo.It("evicts pods in a Job", func() {
-		testEvictsPods(f, &autoscaling.CrossVersionObjectReference{
-			APIVersion: "batch/v1",
-			Kind:       "Job",
-			Name:       "hamster-job",
+		testEvictsPods(f, &core.TypedLocalObjectReference{
+			APIGroup: &batchGroup,
+			Kind:     "Job",
+			Name:     "hamster-job",
 		})
 	})
 
 	ginkgo.It("evicts pods in a CronJob", func() {
-		testEvictsPods(f, &autoscaling.CrossVersionObjectReference{
-			APIVersion: "batch/v1",
-			Kind:       "CronJob",
-			Name:       "hamster-cronjob",
+		testEvictsPods(f, &core.TypedLocalObjectReference{
+			APIGroup: &batchGroup,
+			Kind:     "CronJob",
+			Name:     "hamster-cronjob",
 		})
 	})
 
 	ginkgo.It("evicts pods in a ReplicaSet", func() {
-		testEvictsPods(f, &autoscaling.CrossVersionObjectReference{
-			APIVersion: "apps/v1",
-			Kind:       "ReplicaSet",
-			Name:       "hamster-rs",
+		testEvictsPods(f, &core.TypedLocalObjectReference{
+			APIGroup: &appsGroup,
+			Kind:     "ReplicaSet",
+			Name:     "hamster-rs",
 		})
 	})
 
 	ginkgo.It("evicts pods in a StatefulSet", func() {
-		testEvictsPods(f, &autoscaling.CrossVersionObjectReference{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
-			Name:       "hamster-stateful",
+		testEvictsPods(f, &core.TypedLocalObjectReference{
+			APIGroup: &appsGroup,
+			Kind:     "StatefulSet",
+			Name:     "hamster-stateful",
 		})
 	})
 
@@ -216,7 +216,7 @@ var _ = ActuationSuiteE2eDescribe("Actuation", func() {
 		// Max CPU limit is 300m and ratio is 3., so max request is 100m, while
 		// recommendation is 200m
 		// Max memory limit is 1T and ratio is 2., so max request is 0.5T
-		InstallLimitRangeWithMax(f, "300m", "1T", apiv1.LimitTypeContainer)
+		InstallLimitRangeWithMax(f, "300m", "1T", core.LimitTypeContainer)
 
 		ginkgo.By(fmt.Sprintf("Waiting for pods to be evicted, hoping it won't happen, sleep for %s", VpaEvictionTimeout.String()))
 		CheckNoPodsEvicted(f, MakePodSet(podList))
@@ -235,7 +235,7 @@ var _ = ActuationSuiteE2eDescribe("Actuation", func() {
 		// Min CPU from limit range is 100m and ratio is 3. Min applies both to limit and request so min
 		// request is 100m request and 300m limit
 		// Min memory limit is 0 and ratio is 2., so min request is 0
-		InstallLimitRangeWithMin(f, "100m", "0", apiv1.LimitTypeContainer)
+		InstallLimitRangeWithMin(f, "100m", "0", core.LimitTypeContainer)
 
 		ginkgo.By(fmt.Sprintf("Waiting for pods to be evicted, hoping it won't happen, sleep for %s", VpaEvictionTimeout.String()))
 		CheckNoPodsEvicted(f, MakePodSet(podList))
@@ -256,7 +256,7 @@ var _ = ActuationSuiteE2eDescribe("Actuation", func() {
 		// Max CPU limit is 600m per pod, 300m per container and ratio is 3., so max request is 100m,
 		// while recommendation is 200m
 		// Max memory limit is 2T per pod, 1T per container and ratio is 2., so max request is 0.5T
-		InstallLimitRangeWithMax(f, "600m", "2T", apiv1.LimitTypePod)
+		InstallLimitRangeWithMax(f, "600m", "2T", core.LimitTypePod)
 
 		ginkgo.By(fmt.Sprintf("Waiting for pods to be evicted, hoping it won't happen, sleep for %s", VpaEvictionTimeout.String()))
 		CheckNoPodsEvicted(f, MakePodSet(podList))
@@ -277,7 +277,7 @@ var _ = ActuationSuiteE2eDescribe("Actuation", func() {
 		// Min CPU from limit range is 200m per pod, 100m per container and ratio is 3. Min applies both
 		// to limit and request so min request is 100m request and 300m limit
 		// Min memory limit is 0 and ratio is 2., so min request is 0
-		InstallLimitRangeWithMin(f, "200m", "0", apiv1.LimitTypePod)
+		InstallLimitRangeWithMin(f, "200m", "0", core.LimitTypePod)
 
 		ginkgo.By(fmt.Sprintf("Waiting for pods to be evicted, hoping it won't happen, sleep for %s", VpaEvictionTimeout.String()))
 		CheckNoPodsEvicted(f, MakePodSet(podList))
@@ -318,8 +318,8 @@ var _ = ActuationSuiteE2eDescribe("Actuation", func() {
 		ginkgo.By("Setting up a hamster vpa")
 
 		mode := vpa_types.UpdateModeAuto
-		hamsterResourceList := apiv1.ResourceList{apiv1.ResourceCPU: ParseQuantityOrDie("100m")}
-		sidecarResourceList := apiv1.ResourceList{apiv1.ResourceCPU: ParseQuantityOrDie("5000m")}
+		hamsterResourceList := core.ResourceList{core.ResourceCPU: ParseQuantityOrDie("100m")}
+		sidecarResourceList := core.ResourceList{core.ResourceCPU: ParseQuantityOrDie("5000m")}
 
 		vpaCRD := NewVPA(f, "hamster-vpa", hamsterTargetRef)
 		vpaCRD.Spec.UpdatePolicy.UpdateMode = &mode
@@ -362,18 +362,18 @@ var _ = ActuationSuiteE2eDescribe("Actuation", func() {
 	})
 })
 
-func getCPURequest(podSpec apiv1.PodSpec) resource.Quantity {
-	return podSpec.Containers[0].Resources.Requests[apiv1.ResourceCPU]
+func getCPURequest(podSpec core.PodSpec) resource.Quantity {
+	return podSpec.Containers[0].Resources.Requests[core.ResourceCPU]
 }
 
-func killPod(f *framework.Framework, podList *apiv1.PodList) {
+func killPod(f *framework.Framework, podList *core.PodList) {
 	f.ClientSet.CoreV1().Pods(f.Namespace.Name).Delete(context.TODO(), podList.Items[0].Name, metav1.DeleteOptions{})
 	err := WaitForPodsRestarted(f, podList)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
 // assertPodsPendingForDuration checks that at most pendingPodsNum pods are pending for pendingDuration
-func assertPodsPendingForDuration(c clientset.Interface, deployment *appsv1.Deployment, pendingPodsNum int, pendingDuration time.Duration) error {
+func assertPodsPendingForDuration(c clientset.Interface, deployment *apps.Deployment, pendingPodsNum int, pendingDuration time.Duration) error {
 
 	pendingPods := make(map[string]time.Time)
 
@@ -393,7 +393,7 @@ func assertPodsPendingForDuration(c clientset.Interface, deployment *appsv1.Depl
 		for _, pod := range currentPodList.Items {
 			delete(missingPods, pod.Name)
 			switch pod.Status.Phase {
-			case apiv1.PodPending:
+			case core.PodPending:
 				_, ok := pendingPods[pod.Name]
 				if !ok {
 					pendingPods[pod.Name] = now
@@ -431,7 +431,7 @@ func assertPodsPendingForDuration(c clientset.Interface, deployment *appsv1.Depl
 	return nil
 }
 
-func testEvictsPods(f *framework.Framework, controller *autoscaling.CrossVersionObjectReference) {
+func testEvictsPods(f *framework.Framework, controller *core.TypedLocalObjectReference) {
 	ginkgo.By(fmt.Sprintf("Setting up a hamster %v", controller.Kind))
 	setupHamsterController(f, controller.Kind, "100m", "100Mi", defaultHamsterReplicas)
 	podList, err := GetHamsterPods(f)
@@ -445,7 +445,7 @@ func testEvictsPods(f *framework.Framework, controller *autoscaling.CrossVersion
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
-func setupHamsterController(f *framework.Framework, controllerKind, cpu, memory string, replicas int32) *apiv1.PodList {
+func setupHamsterController(f *framework.Framework, controllerKind, cpu, memory string, replicas int32) *core.PodList {
 	switch controllerKind {
 	case "Deployment":
 		SetupHamsterDeployment(f, cpu, memory, replicas)
@@ -479,7 +479,7 @@ func setupHamsterReplicationController(f *framework.Framework, cpu, memory strin
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 }
 
-func waitForRCPodsRunning(f *framework.Framework, rc *apiv1.ReplicationController) error {
+func waitForRCPodsRunning(f *framework.Framework, rc *core.ReplicationController) error {
 	return wait.PollImmediate(pollInterval, pollTimeout, func() (bool, error) {
 		podList, err := GetHamsterPods(f)
 		if err != nil {
@@ -488,7 +488,7 @@ func waitForRCPodsRunning(f *framework.Framework, rc *apiv1.ReplicationControlle
 		}
 		podsRunning := int32(0)
 		for _, pod := range podList.Items {
-			if pod.Status.Phase == apiv1.PodRunning {
+			if pod.Status.Phase == core.PodRunning {
 				podsRunning += 1
 			}
 		}
@@ -497,7 +497,7 @@ func waitForRCPodsRunning(f *framework.Framework, rc *apiv1.ReplicationControlle
 }
 
 func setupHamsterJob(f *framework.Framework, cpu, memory string, replicas int32) {
-	job := framework_job.NewTestJob("notTerminate", "hamster-job", apiv1.RestartPolicyOnFailure,
+	job := framework_job.NewTestJob("notTerminate", "hamster-job", core.RestartPolicyOnFailure,
 		replicas, replicas, nil, 10)
 	job.Spec.Template.Spec.Containers[0] = SetupHamsterContainer(cpu, memory)
 	for label, value := range hamsterLabels {
@@ -528,13 +528,13 @@ func setupHamsterStateful(f *framework.Framework, cpu, memory string, replicas i
 	framework_ss.WaitForRunningAndReady(f.ClientSet, *stateful.Spec.Replicas, stateful)
 }
 
-func setupPDB(f *framework.Framework, name string, maxUnavailable int) *policyv1beta1.PodDisruptionBudget {
+func setupPDB(f *framework.Framework, name string, maxUnavailable int) *policy.PodDisruptionBudget {
 	maxUnavailableIntstr := intstr.FromInt(maxUnavailable)
-	pdb := &policyv1beta1.PodDisruptionBudget{
+	pdb := &policy.PodDisruptionBudget{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: policyv1beta1.PodDisruptionBudgetSpec{
+		Spec: policy.PodDisruptionBudgetSpec{
 			MaxUnavailable: &maxUnavailableIntstr,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: hamsterLabels,
@@ -546,13 +546,13 @@ func setupPDB(f *framework.Framework, name string, maxUnavailable int) *policyv1
 	return pdb
 }
 
-func getCurrentPodSetForDeployment(c clientset.Interface, d *appsv1.Deployment) PodSet {
+func getCurrentPodSetForDeployment(c clientset.Interface, d *apps.Deployment) PodSet {
 	podList, err := framework_deployment.GetPodsForDeployment(c, d)
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 	return MakePodSet(podList)
 }
 
-func createReplicaSetWithRetries(c clientset.Interface, namespace string, obj *appsv1.ReplicaSet) error {
+func createReplicaSetWithRetries(c clientset.Interface, namespace string, obj *apps.ReplicaSet) error {
 	if obj == nil {
 		return fmt.Errorf("object provided to create is empty")
 	}
@@ -569,7 +569,7 @@ func createReplicaSetWithRetries(c clientset.Interface, namespace string, obj *a
 	return testutils.RetryWithExponentialBackOff(createFunc)
 }
 
-func createStatefulSetSetWithRetries(c clientset.Interface, namespace string, obj *appsv1.StatefulSet) error {
+func createStatefulSetSetWithRetries(c clientset.Interface, namespace string, obj *apps.StatefulSet) error {
 	if obj == nil {
 		return fmt.Errorf("object provided to create is empty")
 	}
@@ -587,8 +587,8 @@ func createStatefulSetSetWithRetries(c clientset.Interface, namespace string, ob
 }
 
 // newReplicaSet returns a new ReplicaSet.
-func newReplicaSet(name, namespace string, replicas int32, podLabels map[string]string, imageName, image string) *appsv1.ReplicaSet {
-	return &appsv1.ReplicaSet{
+func newReplicaSet(name, namespace string, replicas int32, podLabels map[string]string, imageName, image string) *apps.ReplicaSet {
+	return &apps.ReplicaSet{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "ReplicaSet",
 			APIVersion: "apps/v1",
@@ -597,21 +597,21 @@ func newReplicaSet(name, namespace string, replicas int32, podLabels map[string]
 			Namespace: namespace,
 			Name:      name,
 		},
-		Spec: appsv1.ReplicaSetSpec{
+		Spec: apps.ReplicaSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: podLabels,
 			},
 			Replicas: &replicas,
-			Template: apiv1.PodTemplateSpec{
+			Template: core.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: podLabels,
 				},
-				Spec: apiv1.PodSpec{
-					Containers: []apiv1.Container{
+				Spec: core.PodSpec{
+					Containers: []core.Container{
 						{
 							Name:            imageName,
 							Image:           image,
-							SecurityContext: &apiv1.SecurityContext{},
+							SecurityContext: &core.SecurityContext{},
 						},
 					},
 				},

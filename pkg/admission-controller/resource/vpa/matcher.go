@@ -17,35 +17,36 @@ limitations under the License.
 package vpa
 
 import (
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_lister "kubedb.dev/apimachinery/client/listers/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/target"
+	vpa_api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_lister "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/listers/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/target"
-	vpa_api_util "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
 	"k8s.io/klog"
 )
 
 // Matcher is capable of returning a single matching VPA object
 // for a pod. Will return nil if no matching object is found.
 type Matcher interface {
-	GetMatchingVPA(pod *core.Pod) *vpa_types.VerticalPodAutoscaler
+	GetMatchingVPA(pod *core.Pod) *vpa_types.VerticalAutoscaler
 }
 
 type matcher struct {
-	vpaLister       vpa_lister.VerticalPodAutoscalerLister
+	vpaLister       vpa_lister.VerticalAutoscalerLister
 	selectorFetcher target.VpaTargetSelectorFetcher
 }
 
 // NewMatcher returns a new VPA matcher.
-func NewMatcher(vpaLister vpa_lister.VerticalPodAutoscalerLister,
+func NewMatcher(vpaLister vpa_lister.VerticalAutoscalerLister,
 	selectorFetcher target.VpaTargetSelectorFetcher) Matcher {
 	return &matcher{vpaLister: vpaLister,
 		selectorFetcher: selectorFetcher}
 }
 
-func (m *matcher) GetMatchingVPA(pod *core.Pod) *vpa_types.VerticalPodAutoscaler {
-	configs, err := m.vpaLister.VerticalPodAutoscalers(pod.Namespace).List(labels.Everything())
+func (m *matcher) GetMatchingVPA(pod *core.Pod) *vpa_types.VerticalAutoscaler {
+	configs, err := m.vpaLister.VerticalAutoscalers(pod.Namespace).List(labels.Everything())
 	if err != nil {
 		klog.Errorf("failed to get vpa configs: %v", err)
 		return nil

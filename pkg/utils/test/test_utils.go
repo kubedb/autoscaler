@@ -20,18 +20,18 @@ import (
 	"fmt"
 	"time"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_lister "kubedb.dev/apimachinery/client/listers/autoscaling/v1alpha1"
+
 	"github.com/stretchr/testify/mock"
-	apiv1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_types_v1beta1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1beta1"
-	vpa_lister "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/listers/autoscaling.k8s.io/v1"
-	vpa_lister_v1beta1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/listers/autoscaling.k8s.io/v1beta1"
-	"k8s.io/client-go/listers/core/v1"
+	v1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/record"
+	kmapi "kmodules.xyz/client-go/api/v1"
 )
 
 var (
@@ -40,7 +40,7 @@ var (
 )
 
 // BuildTestContainer creates container with specified resources
-func BuildTestContainer(containerName, cpu, mem string) apiv1.Container {
+func BuildTestContainer(containerName, cpu, mem string) core.Container {
 	// TODO: Use builder directly, remove this function.
 	builder := Container().WithName(containerName)
 
@@ -63,28 +63,28 @@ func BuildTestPolicy(containerName, minCPU, maxCPU, minMemory, maxMemory string)
 	maxMemVal, _ := resource.ParseQuantity(maxMemory)
 	return &vpa_types.PodResourcePolicy{ContainerPolicies: []vpa_types.ContainerResourcePolicy{{
 		ContainerName: containerName,
-		MinAllowed: apiv1.ResourceList{
-			apiv1.ResourceMemory: minMemVal,
-			apiv1.ResourceCPU:    minCPUVal,
+		MinAllowed: core.ResourceList{
+			core.ResourceMemory: minMemVal,
+			core.ResourceCPU:    minCPUVal,
 		},
-		MaxAllowed: apiv1.ResourceList{
-			apiv1.ResourceMemory: maxMemVal,
-			apiv1.ResourceCPU:    maxCPUVal,
+		MaxAllowed: core.ResourceList{
+			core.ResourceMemory: maxMemVal,
+			core.ResourceCPU:    maxCPUVal,
 		},
 	},
 	}}
 }
 
 // Resources creates a ResourceList with given amount of cpu and memory.
-func Resources(cpu, mem string) apiv1.ResourceList {
-	result := make(apiv1.ResourceList)
+func Resources(cpu, mem string) core.ResourceList {
+	result := make(core.ResourceList)
 	if len(cpu) > 0 {
 		cpuVal, _ := resource.ParseQuantity(cpu)
-		result[apiv1.ResourceCPU] = cpuVal
+		result[core.ResourceCPU] = cpuVal
 	}
 	if len(mem) > 0 {
 		memVal, _ := resource.ParseQuantity(mem)
-		result[apiv1.ResourceMemory] = memVal
+		result[core.ResourceMemory] = memVal
 	}
 	return result
 }
@@ -95,7 +95,7 @@ type RecommenderAPIMock struct {
 }
 
 // GetRecommendation is mock implementation of RecommenderAPI.GetRecommendation
-func (m *RecommenderAPIMock) GetRecommendation(spec *apiv1.PodSpec) (*vpa_types.RecommendedPodResources, error) {
+func (m *RecommenderAPIMock) GetRecommendation(spec *core.PodSpec) (*vpa_types.RecommendedPodResources, error) {
 	args := m.Called(spec)
 	var returnArg *vpa_types.RecommendedPodResources
 	if args.Get(0) != nil {
@@ -110,7 +110,7 @@ type RecommenderMock struct {
 }
 
 // Get is a mock implementation of Recommender.Get
-func (m *RecommenderMock) Get(spec *apiv1.PodSpec) (*vpa_types.RecommendedPodResources, error) {
+func (m *RecommenderMock) Get(spec *core.PodSpec) (*vpa_types.RecommendedPodResources, error) {
 	args := m.Called(spec)
 	var returnArg *vpa_types.RecommendedPodResources
 	if args.Get(0) != nil {
@@ -125,13 +125,13 @@ type PodsEvictionRestrictionMock struct {
 }
 
 // Evict is a mock implementation of PodsEvictionRestriction.Evict
-func (m *PodsEvictionRestrictionMock) Evict(pod *apiv1.Pod, eventRecorder record.EventRecorder) error {
+func (m *PodsEvictionRestrictionMock) Evict(pod *core.Pod, eventRecorder record.EventRecorder) error {
 	args := m.Called(pod, eventRecorder)
 	return args.Error(0)
 }
 
 // CanEvict is a mock implementation of PodsEvictionRestriction.CanEvict
-func (m *PodsEvictionRestrictionMock) CanEvict(pod *apiv1.Pod) bool {
+func (m *PodsEvictionRestrictionMock) CanEvict(pod *core.Pod) bool {
 	args := m.Called(pod)
 	return args.Bool(0)
 }
@@ -152,79 +152,79 @@ func (m *PodListerMock) Pods(namespace string) v1.PodNamespaceLister {
 }
 
 // List is a mock implementation of PodLister.List
-func (m *PodListerMock) List(selector labels.Selector) (ret []*apiv1.Pod, err error) {
+func (m *PodListerMock) List(selector labels.Selector) (ret []*core.Pod, err error) {
 	args := m.Called()
-	var returnArg []*apiv1.Pod
+	var returnArg []*core.Pod
 	if args.Get(0) != nil {
-		returnArg = args.Get(0).([]*apiv1.Pod)
+		returnArg = args.Get(0).([]*core.Pod)
 	}
 	return returnArg, args.Error(1)
 }
 
 // Get is not implemented for this mock
-func (m *PodListerMock) Get(name string) (*apiv1.Pod, error) {
+func (m *PodListerMock) Get(name string) (*core.Pod, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
-// VerticalPodAutoscalerListerMock is a mock of VerticalPodAutoscalerLister or
-// VerticalPodAutoscalerNamespaceLister - the crucial List method is the same.
-type VerticalPodAutoscalerListerMock struct {
+// VerticalAutoscalerListerMock is a mock of VerticalAutoscalerLister or
+// VerticalAutoscalerNamespaceLister - the crucial List method is the same.
+type VerticalAutoscalerListerMock struct {
 	mock.Mock
 }
 
-// List is a mock implementation of VerticalPodAutoscalerLister.List
-func (m *VerticalPodAutoscalerListerMock) List(selector labels.Selector) (ret []*vpa_types.VerticalPodAutoscaler, err error) {
+// List is a mock implementation of VerticalAutoscalerLister.List
+func (m *VerticalAutoscalerListerMock) List(selector labels.Selector) (ret []*vpa_types.VerticalAutoscaler, err error) {
 	args := m.Called()
-	var returnArg []*vpa_types.VerticalPodAutoscaler
+	var returnArg []*vpa_types.VerticalAutoscaler
 	if args.Get(0) != nil {
-		returnArg = args.Get(0).([]*vpa_types.VerticalPodAutoscaler)
+		returnArg = args.Get(0).([]*vpa_types.VerticalAutoscaler)
 	}
 	return returnArg, args.Error(1)
 }
 
-// VerticalPodAutoscalers is a mock implementation of returning a lister for namespace.
-func (m *VerticalPodAutoscalerListerMock) VerticalPodAutoscalers(namespace string) vpa_lister.VerticalPodAutoscalerNamespaceLister {
+// VerticalAutoscalers is a mock implementation of returning a lister for namespace.
+func (m *VerticalAutoscalerListerMock) VerticalAutoscalers(namespace string) vpa_lister.VerticalAutoscalerNamespaceLister {
 	args := m.Called(namespace)
-	var returnArg vpa_lister.VerticalPodAutoscalerNamespaceLister
+	var returnArg vpa_lister.VerticalAutoscalerNamespaceLister
 	if args.Get(0) != nil {
-		returnArg = args.Get(0).(vpa_lister.VerticalPodAutoscalerNamespaceLister)
+		returnArg = args.Get(0).(vpa_lister.VerticalAutoscalerNamespaceLister)
 	}
 	return returnArg
 }
 
 // Get is not implemented for this mock
-func (m *VerticalPodAutoscalerListerMock) Get(name string) (*vpa_types.VerticalPodAutoscaler, error) {
+func (m *VerticalAutoscalerListerMock) Get(name string) (*vpa_types.VerticalAutoscaler, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
-// VerticalPodAutoscalerV1Beta1ListerMock is a mock of VerticalPodAutoscalerLister or
-// VerticalPodAutoscalerNamespaceLister - the crucial List method is the same.
-type VerticalPodAutoscalerV1Beta1ListerMock struct {
+// VerticalAutoscalerV1Beta1ListerMock is a mock of VerticalAutoscalerLister or
+// VerticalAutoscalerNamespaceLister - the crucial List method is the same.
+type VerticalAutoscalerV1Beta1ListerMock struct {
 	mock.Mock
 }
 
-// List is a mock implementation of VerticalPodAutoscalerLister.List
-func (m *VerticalPodAutoscalerV1Beta1ListerMock) List(selector labels.Selector) (ret []*vpa_types_v1beta1.VerticalPodAutoscaler, err error) {
+// List is a mock implementation of VerticalAutoscalerLister.List
+func (m *VerticalAutoscalerV1Beta1ListerMock) List(selector labels.Selector) (ret []*vpa_types.VerticalAutoscaler, err error) {
 	args := m.Called()
-	var returnArg []*vpa_types_v1beta1.VerticalPodAutoscaler
+	var returnArg []*vpa_types.VerticalAutoscaler
 	if args.Get(0) != nil {
-		returnArg = args.Get(0).([]*vpa_types_v1beta1.VerticalPodAutoscaler)
+		returnArg = args.Get(0).([]*vpa_types.VerticalAutoscaler)
 	}
 	return returnArg, args.Error(1)
 }
 
-// VerticalPodAutoscalers is a mock implementation of returning a lister for namespace.
-func (m *VerticalPodAutoscalerV1Beta1ListerMock) VerticalPodAutoscalers(namespace string) vpa_lister_v1beta1.VerticalPodAutoscalerNamespaceLister {
+// VerticalAutoscalers is a mock implementation of returning a lister for namespace.
+func (m *VerticalAutoscalerV1Beta1ListerMock) VerticalAutoscalers(namespace string) vpa_lister.VerticalAutoscalerNamespaceLister {
 	args := m.Called(namespace)
-	var returnArg vpa_lister_v1beta1.VerticalPodAutoscalerNamespaceLister
+	var returnArg vpa_lister.VerticalAutoscalerNamespaceLister
 	if args.Get(0) != nil {
-		returnArg = args.Get(0).(vpa_lister_v1beta1.VerticalPodAutoscalerNamespaceLister)
+		returnArg = args.Get(0).(vpa_lister.VerticalAutoscalerNamespaceLister)
 	}
 	return returnArg
 }
 
 // Get is not implemented for this mock
-func (m *VerticalPodAutoscalerV1Beta1ListerMock) Get(name string) (*vpa_types_v1beta1.VerticalPodAutoscaler, error) {
+func (m *VerticalAutoscalerV1Beta1ListerMock) Get(name string) (*vpa_types.VerticalAutoscaler, error) {
 	return nil, fmt.Errorf("unimplemented")
 }
 
@@ -236,8 +236,8 @@ type RecommendationProcessorMock struct {
 // Apply is a mock implementation of RecommendationProcessor.Apply
 func (m *RecommendationProcessorMock) Apply(podRecommendation *vpa_types.RecommendedPodResources,
 	policy *vpa_types.PodResourcePolicy,
-	conditions []vpa_types.VerticalPodAutoscalerCondition,
-	pod *apiv1.Pod) (*vpa_types.RecommendedPodResources, map[string][]string, error) {
+	conditions []kmapi.Condition,
+	pod *core.Pod) (*vpa_types.RecommendedPodResources, map[string][]string, error) {
 	args := m.Called()
 	var returnArg *vpa_types.RecommendedPodResources
 	if args.Get(0) != nil {
@@ -256,8 +256,8 @@ type FakeRecommendationProcessor struct{}
 // Apply is a dummy implementation of RecommendationProcessor.Apply which returns provided podRecommendation
 func (f *FakeRecommendationProcessor) Apply(podRecommendation *vpa_types.RecommendedPodResources,
 	policy *vpa_types.PodResourcePolicy,
-	conditions []vpa_types.VerticalPodAutoscalerCondition,
-	pod *apiv1.Pod) (*vpa_types.RecommendedPodResources, map[string][]string, error) {
+	conditions []kmapi.Condition,
+	pod *core.Pod) (*vpa_types.RecommendedPodResources, map[string][]string, error) {
 	return podRecommendation, nil, nil
 }
 

@@ -20,15 +20,16 @@ import (
 	"fmt"
 	"testing"
 
+	"kubedb.dev/autoscaler/pkg/utils/test"
+
 	"github.com/stretchr/testify/assert"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
+	core "k8s.io/api/core/v1"
 )
 
 func TestGetVpaObservedContainersValue(t *testing.T) {
 	tests := []struct {
 		name string
-		pod  *v1.Pod
+		pod  *core.Pod
 		want string
 	}{
 		{

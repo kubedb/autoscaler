@@ -21,16 +21,17 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+
+	apps "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	corev1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/wait"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	"k8s.io/client-go/discovery"
 	cacheddiscovery "k8s.io/client-go/discovery/cached"
 	"k8s.io/client-go/dynamic"
@@ -51,7 +52,7 @@ const (
 type VpaTargetSelectorFetcher interface {
 	// Fetch returns a labelSelector used to gather Pods controlled by the given VPA.
 	// If error is nil, the returned labelSelector is not nil.
-	Fetch(vpa *vpa_types.VerticalPodAutoscaler) (labels.Selector, error)
+	Fetch(vpa *vpa_types.VerticalAutoscaler) (labels.Selector, error)
 }
 
 type wellKnownController string
@@ -117,7 +118,7 @@ type vpaTargetSelectorFetcher struct {
 	informersMap    map[wellKnownController]cache.SharedIndexInformer
 }
 
-func (f *vpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalPodAutoscaler) (labels.Selector, error) {
+func (f *vpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalAutoscaler) (labels.Selector, error) {
 	if vpa.Spec.TargetRef == nil {
 		return nil, fmt.Errorf("targetRef not defined. If this is a v1beta1 object switch to v1beta2.")
 	}
@@ -129,19 +130,18 @@ func (f *vpaTargetSelectorFetcher) Fetch(vpa *vpa_types.VerticalPodAutoscaler) (
 
 	// not on a list of known controllers, use scale sub-resource
 	// TODO: cache response
-	groupVersion, err := schema.ParseGroupVersion(vpa.Spec.TargetRef.APIVersion)
-	if err != nil {
-		return nil, err
+	if vpa.Spec.TargetRef.APIGroup == nil {
+		return nil, fmt.Errorf("missing apiGroup for target of VerticalAutoscaler %s/%s", vpa.Namespace, vpa.Name)
 	}
 	groupKind := schema.GroupKind{
-		Group: groupVersion.Group,
+		Group: *vpa.Spec.TargetRef.APIGroup,
 		Kind:  vpa.Spec.TargetRef.Kind,
 	}
 
 	selector, err := f.getLabelSelectorFromResource(groupKind, vpa.Namespace, vpa.Spec.TargetRef.Name)
 	if err != nil {
 		return nil, fmt.Errorf("Unhandled targetRef %s / %s / %s, last error %v",
-			vpa.Spec.TargetRef.APIVersion, vpa.Spec.TargetRef.Kind, vpa.Spec.TargetRef.Name, err)
+			*vpa.Spec.TargetRef.APIGroup, vpa.Spec.TargetRef.Kind, vpa.Spec.TargetRef.Name, err)
 	}
 	return selector, nil
 }
@@ -154,48 +154,20 @@ func getLabelSelector(informer cache.SharedIndexInformer, kind, namespace, name 
 	if !exists {
 		return nil, fmt.Errorf("%s %s/%s does not exist", kind, namespace, name)
 	}
-	switch obj.(type) {
-	case (*appsv1.DaemonSet):
-		apiObj, ok := obj.(*appsv1.DaemonSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	switch apiObj := obj.(type) {
+	case *apps.DaemonSet:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*appsv1.Deployment):
-		apiObj, ok := obj.(*appsv1.Deployment)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.Deployment:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*appsv1.StatefulSet):
-		apiObj, ok := obj.(*appsv1.StatefulSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.StatefulSet:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*appsv1.ReplicaSet):
-		apiObj, ok := obj.(*appsv1.ReplicaSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.ReplicaSet:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*batchv1.Job):
-		apiObj, ok := obj.(*batchv1.Job)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *batchv1.Job:
 		return metav1.LabelSelectorAsSelector(apiObj.Spec.Selector)
-	case (*batchv1beta1.CronJob):
-		apiObj, ok := obj.(*batchv1beta1.CronJob)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *batchv1beta1.CronJob:
 		return metav1.LabelSelectorAsSelector(metav1.SetAsLabelSelector(apiObj.Spec.JobTemplate.Spec.Template.Labels))
-	case (*corev1.ReplicationController):
-		apiObj, ok := obj.(*corev1.ReplicationController)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *core.ReplicationController:
 		return metav1.LabelSelectorAsSelector(metav1.SetAsLabelSelector(apiObj.Spec.Selector))
 	}
 	return nil, fmt.Errorf("Don't know how to read label seletor")

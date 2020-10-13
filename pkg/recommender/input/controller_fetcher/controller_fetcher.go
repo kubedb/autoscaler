@@ -21,10 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
+	apps "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
-	corev1 "k8s.io/api/core/v1"
+	core "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -66,16 +66,16 @@ type ControllerKey struct {
 	Name      string
 }
 
-// ControllerKeyWithAPIVersion identifies a controller and API it's defined in.
-type ControllerKeyWithAPIVersion struct {
+// ControllerKeyWithAPIGroup identifies a controller and API it's defined in.
+type ControllerKeyWithAPIGroup struct {
 	ControllerKey
-	ApiVersion string
+	ApiGroup string
 }
 
 // ControllerFetcher is responsible for finding the topmost well-known or scalable controller
 type ControllerFetcher interface {
 	// FindTopMostWellKnownOrScalable returns topmost well-known or scalable controller. Error is returned if controller cannot be found.
-	FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error)
+	FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error)
 }
 
 type controllerFetcher struct {
@@ -127,23 +127,27 @@ func NewControllerFetcher(config *rest.Config, kubeClient kube_client.Interface,
 	}
 }
 
-func getOwnerController(owners []metav1.OwnerReference, namespace string) *ControllerKeyWithAPIVersion {
+func getOwnerController(owners []metav1.OwnerReference, namespace string) *ControllerKeyWithAPIGroup {
 	for _, owner := range owners {
 		if owner.Controller != nil && *owner.Controller {
-			return &ControllerKeyWithAPIVersion{
+			gv, err := schema.ParseGroupVersion(owner.APIVersion)
+			if err != nil {
+				panic(err)
+			}
+			return &ControllerKeyWithAPIGroup{
 				ControllerKey: ControllerKey{
 					Namespace: namespace,
 					Kind:      owner.Kind,
 					Name:      owner.Name,
 				},
-				ApiVersion: owner.APIVersion,
+				ApiGroup: gv.Group,
 			}
 		}
 	}
 	return nil
 }
 
-func getParentOfWellKnownController(informer cache.SharedIndexInformer, controllerKey ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func getParentOfWellKnownController(informer cache.SharedIndexInformer, controllerKey ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	namespace := controllerKey.Namespace
 	name := controllerKey.Name
 	kind := controllerKey.Kind
@@ -155,65 +159,34 @@ func getParentOfWellKnownController(informer cache.SharedIndexInformer, controll
 	if !exists {
 		return nil, fmt.Errorf("%s %s/%s does not exist", kind, namespace, name)
 	}
-	switch obj.(type) {
-	case (*appsv1.DaemonSet):
-		apiObj, ok := obj.(*appsv1.DaemonSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	switch apiObj := obj.(type) {
+	case *apps.DaemonSet:
 		return getOwnerController(apiObj.OwnerReferences, namespace), nil
-	case (*appsv1.Deployment):
-		apiObj, ok := obj.(*appsv1.Deployment)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.Deployment:
 		return getOwnerController(apiObj.OwnerReferences, namespace), nil
-	case (*appsv1.StatefulSet):
-		apiObj, ok := obj.(*appsv1.StatefulSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.StatefulSet:
 		return getOwnerController(apiObj.OwnerReferences, namespace), nil
-	case (*appsv1.ReplicaSet):
-		apiObj, ok := obj.(*appsv1.ReplicaSet)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *apps.ReplicaSet:
 		return getOwnerController(apiObj.OwnerReferences, namespace), nil
-	case (*batchv1.Job):
-		apiObj, ok := obj.(*batchv1.Job)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *batchv1.Job:
 		return getOwnerController(apiObj.OwnerReferences, namespace), nil
-	case (*batchv1beta1.CronJob):
-		apiObj, ok := obj.(*batchv1beta1.CronJob)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *batchv1beta1.CronJob:
 		return getOwnerController(apiObj.OwnerReferences, namespace), nil
-	case (*corev1.ReplicationController):
-		apiObj, ok := obj.(*corev1.ReplicationController)
-		if !ok {
-			return nil, fmt.Errorf("Failed to parse %s %s/%s", kind, namespace, name)
-		}
+	case *core.ReplicationController:
 		return getOwnerController(apiObj.OwnerReferences, namespace), nil
 	}
 
 	return nil, fmt.Errorf("Don't know how to read owner controller")
 }
 
-func (f *controllerFetcher) getParentOfController(controllerKey ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func (f *controllerFetcher) getParentOfController(controllerKey ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	kind := wellKnownController(controllerKey.Kind)
 	informer, exists := f.informersMap[kind]
 	if exists {
 		return getParentOfWellKnownController(informer, controllerKey)
 	}
 
-	groupKind, err := controllerKey.groupKind()
-	if err != nil {
-		return nil, err
-	}
+	groupKind := controllerKey.groupKind()
 
 	owner, err := f.getOwnerForScaleResource(groupKind, controllerKey.Namespace, controllerKey.Name)
 	if apierrors.IsNotFound(err) {
@@ -221,47 +194,36 @@ func (f *controllerFetcher) getParentOfController(controllerKey ControllerKeyWit
 	}
 	if err != nil {
 		return nil, fmt.Errorf("Unhandled targetRef %s / %s / %s, last error %v",
-			controllerKey.ApiVersion, controllerKey.Kind, controllerKey.Name, err)
+			controllerKey.ApiGroup, controllerKey.Kind, controllerKey.Name, err)
 	}
 
 	return owner, nil
 }
 
-func (c *ControllerKeyWithAPIVersion) groupKind() (schema.GroupKind, error) {
+func (c *ControllerKeyWithAPIGroup) groupKind() schema.GroupKind {
 	// TODO: cache response
-	groupVersion, err := schema.ParseGroupVersion(c.ApiVersion)
-	if err != nil {
-		return schema.GroupKind{}, err
-	}
-
-	groupKind := schema.GroupKind{
-		Group: groupVersion.Group,
+	return schema.GroupKind{
+		Group: c.ApiGroup,
 		Kind:  c.ControllerKey.Kind,
 	}
-
-	return groupKind, nil
 }
 
-func (f *controllerFetcher) isWellKnown(key *ControllerKeyWithAPIVersion) bool {
+func (f *controllerFetcher) isWellKnown(key *ControllerKeyWithAPIGroup) bool {
 	kind := wellKnownController(key.ControllerKey.Kind)
 	_, exists := f.informersMap[kind]
 	return exists
 }
 
-func (f *controllerFetcher) isWellKnownOrScalable(key *ControllerKeyWithAPIVersion) bool {
+func (f *controllerFetcher) isWellKnownOrScalable(key *ControllerKeyWithAPIGroup) bool {
 	if f.isWellKnown(key) {
 		return true
 	}
-	if gk, err := key.groupKind(); err != nil && wellKnownController(gk.Kind) == node {
+	if gk := key.groupKind(); wellKnownController(gk.Kind) == node {
 		return false
 	}
 
 	//if not well known check if it supports scaling
-	groupKind, err := key.groupKind()
-	if err != nil {
-		klog.Errorf("Could not find groupKind for %s/%s: %v", key.Namespace, key.Name, err)
-		return false
-	}
+	groupKind := key.groupKind()
 
 	mappings, err := f.mapper.RESTMappings(groupKind)
 	if err != nil {
@@ -279,7 +241,7 @@ func (f *controllerFetcher) isWellKnownOrScalable(key *ControllerKeyWithAPIVersi
 	return false
 }
 
-func (f *controllerFetcher) getOwnerForScaleResource(groupKind schema.GroupKind, namespace, name string) (*ControllerKeyWithAPIVersion, error) {
+func (f *controllerFetcher) getOwnerForScaleResource(groupKind schema.GroupKind, namespace, name string) (*ControllerKeyWithAPIGroup, error) {
 	if wellKnownController(groupKind.Kind) == node {
 		// Some pods specify nods as their owners. This causes performance problems
 		// in big clusters when VPA tries to get all nodes. We know nodes aren't
@@ -304,19 +266,19 @@ func (f *controllerFetcher) getOwnerForScaleResource(groupKind schema.GroupKind,
 	return nil, lastError
 }
 
-func (f *controllerFetcher) FindTopMostWellKnownOrScalable(key *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
+func (f *controllerFetcher) FindTopMostWellKnownOrScalable(key *ControllerKeyWithAPIGroup) (*ControllerKeyWithAPIGroup, error) {
 	if key == nil {
 		return nil, nil
 	}
 
-	var topMostWellKnownOrScalable *ControllerKeyWithAPIVersion
+	var topMostWellKnownOrScalable *ControllerKeyWithAPIGroup
 
 	wellKnownOrScalable := f.isWellKnownOrScalable(key)
 	if wellKnownOrScalable {
 		topMostWellKnownOrScalable = key
 	}
 
-	visited := make(map[ControllerKeyWithAPIVersion]bool)
+	visited := make(map[ControllerKeyWithAPIGroup]bool)
 	visited[*key] = true
 	for {
 		owner, err := f.getParentOfController(*key)
@@ -341,35 +303,4 @@ func (f *controllerFetcher) FindTopMostWellKnownOrScalable(key *ControllerKeyWit
 
 		key = owner
 	}
-}
-
-type identityControllerFetcher struct {
-}
-
-func (f *identityControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
-	return controller, nil
-}
-
-type constControllerFetcher struct {
-	ControllerKeyWithAPIVersion *ControllerKeyWithAPIVersion
-}
-
-func (f *constControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
-	return f.ControllerKeyWithAPIVersion, nil
-}
-
-type mockControllerFetcher struct {
-	expected *ControllerKeyWithAPIVersion
-	result   *ControllerKeyWithAPIVersion
-}
-
-func (f *mockControllerFetcher) FindTopMostWellKnownOrScalable(controller *ControllerKeyWithAPIVersion) (*ControllerKeyWithAPIVersion, error) {
-	if controller == nil && f.expected == nil {
-		return f.result, nil
-	}
-	if controller == nil || *controller != *f.expected {
-		return nil, fmt.Errorf("Unexpected argument: %v", controller)
-	}
-
-	return f.result, nil
 }

@@ -20,12 +20,12 @@ import (
 	"strings"
 	"testing"
 
-	core "k8s.io/api/core/v1"
-	resource_admission "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/annotations"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/test"
+	resource_admission "kubedb.dev/autoscaler/pkg/admission-controller/resource"
+	"kubedb.dev/autoscaler/pkg/utils/annotations"
+	"kubedb.dev/autoscaler/pkg/utils/test"
 
 	"github.com/stretchr/testify/assert"
+	core "k8s.io/api/core/v1"
 )
 
 func addVpaObservedContainersPatch(containerNames []string) resource_admission.PatchRecord {

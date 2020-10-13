@@ -20,11 +20,12 @@ import (
 	"encoding/json"
 	"fmt"
 
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/admission-controller/resource"
+	"kubedb.dev/autoscaler/pkg/utils/metrics/admission"
+
 	"k8s.io/api/admission/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/admission-controller/resource"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/metrics/admission"
 	"k8s.io/klog"
 )
 
@@ -59,7 +60,7 @@ func (h *resourceHandler) AdmissionResource() admission.AdmissionResource {
 
 // GroupResource returns Group and Resource type this handler accepts.
 func (h *resourceHandler) GroupResource() metav1.GroupResource {
-	return metav1.GroupResource{Group: "autoscaling.k8s.io", Resource: "verticalpodautoscalers"}
+	return metav1.GroupResource{Group: "autoscaling.kubedb.com", Resource: "verticalautoscalers"}
 }
 
 // DisallowIncorrectObjects decides whether incorrect objects (eg. unparsable, not passing validations) should be disallowed by Admission Server.
@@ -98,15 +99,15 @@ func (h *resourceHandler) GetPatches(ar *v1beta1.AdmissionRequest) ([]resource.P
 	return patches, nil
 }
 
-func parseVPA(raw []byte) (*vpa_types.VerticalPodAutoscaler, error) {
-	vpa := vpa_types.VerticalPodAutoscaler{}
+func parseVPA(raw []byte) (*vpa_types.VerticalAutoscaler, error) {
+	vpa := vpa_types.VerticalAutoscaler{}
 	if err := json.Unmarshal(raw, &vpa); err != nil {
 		return nil, err
 	}
 	return &vpa, nil
 }
 
-func validateVPA(vpa *vpa_types.VerticalPodAutoscaler, isCreate bool) error {
+func validateVPA(vpa *vpa_types.VerticalAutoscaler, isCreate bool) error {
 	if vpa.Spec.UpdatePolicy != nil {
 		mode := vpa.Spec.UpdatePolicy.UpdateMode
 		if mode == nil {

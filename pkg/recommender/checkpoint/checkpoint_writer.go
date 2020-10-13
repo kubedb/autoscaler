@@ -22,12 +22,13 @@ import (
 	"sort"
 	"time"
 
-	v1 "k8s.io/api/core/v1"
+	vpa_types "kubedb.dev/apimachinery/apis/autoscaling/v1alpha1"
+	vpa_api "kubedb.dev/apimachinery/client/clientset/versioned/typed/autoscaling/v1alpha1"
+	"kubedb.dev/autoscaler/pkg/recommender/model"
+	api_util "kubedb.dev/autoscaler/pkg/utils/vpa"
+
+	core "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	vpa_types "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
-	vpa_api "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/client/clientset/versioned/typed/autoscaling.k8s.io/v1"
-	"k8s.io/autoscaler/vertical-pod-autoscaler/pkg/recommender/model"
-	api_util "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/utils/vpa"
 	"k8s.io/klog"
 )
 
@@ -40,12 +41,12 @@ type CheckpointWriter interface {
 }
 
 type checkpointWriter struct {
-	vpaCheckpointClient vpa_api.VerticalPodAutoscalerCheckpointsGetter
+	vpaCheckpointClient vpa_api.VerticalAutoscalerCheckpointsGetter
 	cluster             *model.ClusterState
 }
 
 // NewCheckpointWriter returns new instance of a CheckpointWriter
-func NewCheckpointWriter(cluster *model.ClusterState, vpaCheckpointClient vpa_api.VerticalPodAutoscalerCheckpointsGetter) CheckpointWriter {
+func NewCheckpointWriter(cluster *model.ClusterState, vpaCheckpointClient vpa_api.VerticalAutoscalerCheckpointsGetter) CheckpointWriter {
 	return &checkpointWriter{
 		vpaCheckpointClient: vpaCheckpointClient,
 		cluster:             cluster,
@@ -57,7 +58,7 @@ func isFetchingHistory(vpa *model.Vpa) bool {
 	if !found {
 		return false
 	}
-	return condition.Status == v1.ConditionTrue
+	return condition.Status == core.ConditionTrue
 }
 
 func getVpasToCheckpoint(clusterVpas map[model.VpaID]*model.Vpa) []*model.Vpa {
@@ -98,15 +99,15 @@ func (writer *checkpointWriter) StoreCheckpoints(ctx context.Context, now time.T
 				continue
 			}
 			checkpointName := fmt.Sprintf("%s-%s", vpa.ID.VpaName, container)
-			vpaCheckpoint := vpa_types.VerticalPodAutoscalerCheckpoint{
+			vpaCheckpoint := vpa_types.VerticalAutoscalerCheckpoint{
 				ObjectMeta: metav1.ObjectMeta{Name: checkpointName},
-				Spec: vpa_types.VerticalPodAutoscalerCheckpointSpec{
+				Spec: vpa_types.VerticalAutoscalerCheckpointSpec{
 					ContainerName: container,
 					VPAObjectName: vpa.ID.VpaName,
 				},
 				Status: *containerCheckpoint,
 			}
-			err = api_util.CreateOrUpdateVpaCheckpoint(writer.vpaCheckpointClient.VerticalPodAutoscalerCheckpoints(vpa.ID.Namespace), &vpaCheckpoint)
+			err = api_util.CreateOrUpdateVpaCheckpoint(writer.vpaCheckpointClient.VerticalAutoscalerCheckpoints(vpa.ID.Namespace), &vpaCheckpoint)
 			if err != nil {
 				klog.Errorf("Cannot save VPA %s/%s checkpoint for %s. Reason: %+v",
 					vpa.ID.Namespace, vpaCheckpoint.Spec.VPAObjectName, vpaCheckpoint.Spec.ContainerName, err)
